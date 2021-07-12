@@ -1,14 +1,8 @@
 from datetime import datetime
 class VendorClass():
 
-    def __getitem__(self, attr):
-        return getattr(self, attr)
-    
-    def __setitem__(self,attr,value):
-        if value == None:
-            pass
-        else:
-            setattr(self,attr,value)
+
+        
     
     attribute_map = {
         "_VENDOR_NAME": "VENDOR_NAME",
@@ -30,6 +24,48 @@ class VendorClass():
         "_DATE_OF_ENTRY": "DATE_OF_ENTRY",
         "_STATUS": "STATUS"
     }
+    
+    attribute_details = {
+        "_VENDOR_NAME": (str,20),
+        "_CLASS": (str,10),
+        "_COMPANY_NAME": (str,100),
+        "_COMPANY_COUNTRY": (str,50),
+        "_COMPANY_STATE": (str,50),
+        "_COMPANY_CITY": (str,50),
+        "_POSTAL_CODE": (str,30),
+        "_COMPANY_ADDRESS_A": (str,100),
+        "_COMPANY_ADDRESS_B": (str,100),
+        "_VENDOR_DESCRIPTION": (str,100),
+        "_MAIN_CONTACT_PERSON": (str,100),
+        "_MAIN_CONTACT_NUMBER": (str,15),
+        "_MAIN_CONTACT_EMAIL": (str,100),
+        "_SECONDARY_CONTACT_PERSON": (str,100),
+        "_SECONDARY_CONTACT_NUMBER": (str,15),
+        "_SECONDARY_CONTACT_EMAIL": (str,100),
+        "_DATE_OF_ENTRY": (datetime,0),
+        "_STATUS": (int,0)
+    }
+        
+    
+    def __getitem__(self, attr):
+        return getattr(self, attr)
+    #Vendor[attr] returns Vendor.attr
+    
+    def __setitem__(self,attr,value):
+        assert (type(value) == self.attribute_details[attr][0] or value == None)  
+        if value is not None:
+            assert (len(value) <= self.attribute_details[attr][1]) if self.attribute_details[attr][0] ==str else True
+            
+            setattr(self,attr,value)
+        else:
+            if self.attribute_details[attr][0] == str:
+                setattr(self,attr,'')
+            elif self.attribute_details[attr][0] == int:
+                setattr(self,attr,1)
+            elif self.attribute_details[attr][0] == datetime:
+                setattr(self,attr,datetime.now())
+        
+    #Vendor[attr] = info (assigning attributes)
     
     def __init__(self,
                  VENDOR_NAME = None, 
@@ -104,7 +140,7 @@ class VendorClass():
             assert len(MAIN_CONTACT_PERSON) <= 100
             self._MAIN_CONTACT_PERSON = MAIN_CONTACT_PERSON
         if MAIN_CONTACT_NUMBER is not None:
-            assert len(MAIN_CONTACT_NUMBER) <= 20
+            assert len(MAIN_CONTACT_NUMBER) <= 15
             self._MAIN_CONTACT_NUMBER = MAIN_CONTACT_NUMBER
         if MAIN_CONTACT_EMAIL is not None:
             assert len(MAIN_CONTACT_EMAIL) <= 100
@@ -113,7 +149,7 @@ class VendorClass():
             assert len(SECONDARY_CONTACT_PERSON) <= 100
             self._SECONDARY_CONTACT_PERSON = SECONDARY_CONTACT_PERSON
         if SECONDARY_CONTACT_NUMBER is not None:
-            assert len(SECONDARY_CONTACT_NUMBER) <= 20
+            assert len(SECONDARY_CONTACT_NUMBER) <= 15
             self._SECONDARY_CONTACT_NUMBER = SECONDARY_CONTACT_NUMBER
         if SECONDARY_CONTACT_EMAIL is not None:
             assert len(SECONDARY_CONTACT_EMAIL) <= 100
@@ -124,14 +160,7 @@ class VendorClass():
         else:
             self._DATE_OF_ENTRY = datetime.now()
         if STATUS is not None:
-            try: 
-                stat = int(STATUS)
-                assert (stat == 1 or stat == 0)
-            except TypeError as e:
-                print('Status Type Error (1 or 0)')
-            except AssertionError as e:
-                print('STATUS have to 1 or 0')
-            except Exception as e:
-                print(e)
+            stat = int(STATUS)
+            assert (stat == 1 or stat == 0)
             self._STATUS = STATUS
             

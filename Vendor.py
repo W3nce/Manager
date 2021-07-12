@@ -522,44 +522,56 @@ def RunVEND(username,pw):
                                               filetypes=(("CSV Files", "*.csv"),
                                                         ("Any Files", "*.*")),parent = root)
         fullLst = []
-        with open(f"{fileDir}") as f: 
-            csvFile = csv.reader(f, delimiter=",")
-            
-            rawLst = []
-            for row in csvFile:
-                rawLst.append(row)
-            
-            
-            fline = rawLst[0]
-            VendorAttributeDict = VendorClass.attribute_map
-            VendAttrNames = [i[1] for i in VendorAttributeDict.items()]
-            
-            try: 
-                if 'ï»¿' in fline[0]:
-                    fline[0] = fline[0].replace('ï»¿','')
-                    
-                else:
-                    pass
-                valid = [fieldname in VendAttrNames for fieldname in fline]
-                assert all(valid)
-
-            except Exception as e:
-                print(e)
-
-            for i in range(1, len(rawLst)):
-                SingleVendor = VendorClass()
+        try:
+            with open(f"{fileDir}") as f: 
+                csvFile = csv.reader(f, delimiter=",")
                 
-                for j in range(len(rawLst[i])):
+                rawLst = []
+                for row in csvFile:
+                    rawLst.append(row)
+                
+                #print(rawLst)
+                
+                fline = rawLst[0]
+                VendorAttributeDict = VendorClass.attribute_map
+                VendAttrNames = [i[1] for i in VendorAttributeDict.items()]
+                
+                try: 
+                    if 'ï»¿' in fline[0]:
+                        fline[0] = fline[0].replace('ï»¿','')
+                        
+                    else:
+                        pass
+                    valid = [fieldname in VendAttrNames for fieldname in fline]
+                    assert all(valid)
+    
+                except Exception as e:
+                    print(e)
+    
+                for i in range(1, len(rawLst)):
+                    SingleVendor = VendorClass()
                     
-                    for attr in VendorClass.attribute_map:
-                        if rawLst[0][j] == VendorClass.attribute_map[attr]:
-                            SingleVendor[attr] = rawLst[i][j] if rawLst[i][j] else None
-
-                    
-                    singleLst  = [SingleVendor[attr] for attr in VendorClass.attribute_map]
-                if singleLst != ["" for attr in VendorClass.attribute_map]:
-                    fullLst.append(singleLst)
-            
+                    for j in range(len(rawLst[i])):
+                        
+                        for attr in VendorClass.attribute_map:
+                            if rawLst[0][j] == VendorClass.attribute_map[attr]:
+                                try: 
+                                    SingleVendor[attr] = rawLst[i][j] if rawLst[i][j] else None
+                                except AssertionError as e:
+                                    print(e)
+                                    messagebox.showerror("Vendor Import", 
+                                                        f"Incorrect Vendor Imput at \n{SingleVendor['_VENDOR_NAME']} : {VendorClass.attribute_map[attr]}", 
+                                                        parent=root)
+                                    return
+                        
+                        singleLst  = [SingleVendor[attr] for attr in VendorClass.attribute_map]
+                    if singleLst != ["" for attr in VendorClass.attribute_map]:
+                        fullLst.append(singleLst)
+        except FileNotFoundError as e:
+            messagebox.showinfo("Vendor Import", 
+                    "No file selected", parent=root) 
+            return
+                
         sqlfields = ', '.join([VendorAttributeDict[attr] for attr in VendorClass.attribute_map])
         sqlvalues = ', '.join(['%s' for attr in VendorClass.attribute_map])
 
@@ -599,6 +611,7 @@ def RunVEND(username,pw):
                 pass
             else:
                 messagebox.showerror("Column Error", "Column name in Database have changed",parent = root)
+                # Attribute in Class different from Database field name
                 return
             fullLst = []
             for i in range(len(result)):
@@ -625,13 +638,14 @@ def RunVEND(username,pw):
                                       ) 
         if f is None: # asksaveasfile return `None` if dialog closed with "cancel".
             return
-        theWriter = csv.writer(f)
+        theWriter = csv.writer(f,lineterminator='\n')
         theWriter.writerow(VendAttrNames)
         for rec in fullLst:
             theWriter.writerow(rec)
-            
+        f.close()
+        
         messagebox.showinfo("Export Successful", 
-                            f"You Have Successfuly Exported {unitFull}", parent=root) 
+                            f"You Have Successfuly Exported a Vendor List", parent=root) 
                 
 
 
