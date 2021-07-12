@@ -1,0 +1,15 @@
+# make sure content of this file is parsed when installing environment
+python-dateutil>=2.7
+urllib3
+certifi
+xero-python==v1.7.0
+requests
+selenium
+tkinter
+tkcalendar
+datetime
+PIL
+mysqlclient
+mysql-connector-python
+csv
+fpdf2
