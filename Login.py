@@ -124,6 +124,8 @@ SetupCommand = ["""
                      `PaymentTerm` VARCHAR(255),
                      `OrderDate` DATE,
                      `VendorRemark` VARCHAR(100),
+                     `TransCcy` VARCHAR(10),
+                     `TransExRate` FLOAT,
                      `DateEntry` DATETIME NOT NULL)
                     
                     ENGINE = InnoDB
@@ -225,64 +227,6 @@ curCcy.close()
 
 
 
-
-
-             
-connVendInit = connect(host = logininfo[0],
-                           user = logininfo[1], 
-                           password =logininfo[2])
-    
-    
-    
-CreateVendDatabase = ["""
-                      CREATE SCHEMA IF NOT EXISTS `INDEX_VEND_MASTER` 
-                      DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci """,
-                      
-                      """
-                      CREATE TABLE IF NOT EXISTS `INDEX_VEND_MASTER`.`VENDOR_LIST`
-                      (`oid` INT AUTO_INCREMENT PRIMARY KEY,
-                       `VENDOR_NAME` VARCHAR(30),
-                       `CLASS` VARCHAR(10),
-                       `COMPANY_NAME` VARCHAR(100),
-                       `COMPANY_COUNTRY` VARCHAR(50),
-                       `COMPANY_STATE` VARCHAR(50),
-                       `COMPANY_CITY` VARCHAR(50),
-                       `POSTAL_CODE` VARCHAR(30),
-                       `COMPANY_ADDRESS_A` VARCHAR(100),
-                       `COMPANY_ADDRESS_B` VARCHAR(100),
-                       `VENDOR_DESCRIPTION` VARCHAR(100),
-                       `MAIN_CONTACT_PERSON` VARCHAR(100),
-                       `MAIN_CONTACT_NUMBER` VARCHAR(15),
-                       `MAIN_CONTACT_EMAIL` VARCHAR(100),
-                       `SECONDARY_CONTACT_PERSON` VARCHAR(100),
-                       `SECONDARY_CONTACT_NUMBER` VARCHAR(15),
-                       `SECONDARY_CONTACT_EMAIL` VARCHAR(100),
-                       `DATE_OF_ENTRY` DATETIME NOT NULL,
-                       `STATUS` INT)
-                      
-                      ENGINE = InnoDB
-                      DEFAULT CHARACTER SET = utf8mb4
-                      COLLATE = utf8mb4_0900_ai_ci""",
-                      
-                      """
-                      CREATE TABLE IF NOT EXISTS `INDEX_VEND_MASTER`.`CLASS_LIST`
-                      (`oid` INT AUTO_INCREMENT PRIMARY KEY,
-                       `CLASS` VARCHAR(10),
-                       `DESCRIPTION` VARCHAR(100))
-                      
-                      ENGINE = InnoDB
-                      DEFAULT CHARACTER SET = utf8mb4
-                      COLLATE = utf8mb4_0900_ai_ci
-                      """]
-
-curVendInit = connVendInit.cursor()
-
-for command in CreateVendDatabase:
-    curVendInit.execute(command)
-    connVendInit.commit()
-
-curVendInit.close()                 
-                 
 curCls = connLogin.cursor()
 curCls.execute("SELECT * FROM `INDEX_VEND_MASTER`.`CLASS_LIST`")
 existLst = curCls.fetchall()
@@ -319,6 +263,63 @@ if existLst == []:
     connLogin.commit()
 curCls.close()
 
+
+             
+connVendInit = connect(host = logininfo[0],
+                           user = logininfo[1], 
+                           password =logininfo[2])
+    
+    
+    
+CreateVendDatabase = ["""
+                      CREATE SCHEMA IF NOT EXISTS `INDEX_VEND_MASTER` 
+                      DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci """,
+                      
+                      """
+                      CREATE TABLE IF NOT EXISTS `INDEX_VEND_MASTER`.`VENDOR_LIST`
+                      (`oid` INT AUTO_INCREMENT PRIMARY KEY,
+                       `VENDOR_NAME` VARCHAR(20),
+                       `CLASS` VARCHAR(10),
+                       `COMPANY_NAME` VARCHAR(100),
+                       `COMPANY_COUNTRY` VARCHAR(50),
+                       `COMPANY_STATE` VARCHAR(50),
+                       `COMPANY_CITY` VARCHAR(50),
+                       `POSTAL_CODE` VARCHAR(30),
+                       `COMPANY_ADDRESS_A` VARCHAR(100),
+                       `COMPANY_ADDRESS_B` VARCHAR(100),
+                       `VENDOR_DESCRIPTION` VARCHAR(100),
+                       `MAIN_CONTACT_PERSON` VARCHAR(100),
+                       `MAIN_CONTACT_NUMBER` VARCHAR(20),
+                       `MAIN_CONTACT_EMAIL` VARCHAR(100),
+                       `SECONDARY_CONTACT_PERSON` VARCHAR(100),
+                       `SECONDARY_CONTACT_NUMBER` VARCHAR(20),
+                       `SECONDARY_CONTACT_EMAIL` VARCHAR(100),
+                       `DATE_OF_ENTRY` DATETIME NOT NULL,
+                       `STATUS` INT)
+                      
+                      ENGINE = InnoDB
+                      DEFAULT CHARACTER SET = utf8mb4
+                      COLLATE = utf8mb4_0900_ai_ci""",
+                      
+                      """
+                      CREATE TABLE IF NOT EXISTS `INDEX_VEND_MASTER`.`CLASS_LIST`
+                      (`oid` INT AUTO_INCREMENT PRIMARY KEY,
+                       `CLASS` VARCHAR(10),
+                       `DESCRIPTION` VARCHAR(100))
+                      
+                      ENGINE = InnoDB
+                      DEFAULT CHARACTER SET = utf8mb4
+                      COLLATE = utf8mb4_0900_ai_ci
+                      """]
+
+curVendInit = connVendInit.cursor()
+
+for command in CreateVendDatabase:
+    curVendInit.execute(command)
+    connVendInit.commit()
+
+curVendInit.close()                 
+                 
 
 
 AUTH = 0

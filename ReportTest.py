@@ -60,6 +60,8 @@ def openPurchase():
                      `PaymentTerm` VARCHAR(255),
                      `OrderDate` DATE,
                      `VendorRemark` VARCHAR(100),
+                     `TransCcy` VARCHAR(10),
+                     `TransExRate` FLOAT,
                      `DateEntry` DATETIME NOT NULL)
                     
                     ENGINE = InnoDB
@@ -162,20 +164,23 @@ def openPurchase():
                                 "PaymentTerm", 
                                 "OrderDate", 
                                 "VendorRemark",
+                                "TransCcy",
                                 "DateEntry")
     
     OrderTreeView.column("#0", anchor = CENTER, width =80, minwidth = 0)
     # OrderTreeView.column("#0",  width=0, stretch=NO)
     OrderTreeView.column("PurOrderNum", anchor = CENTER, width = 200, minwidth = 50)
-    OrderTreeView.column("PaymentTerm", anchor = CENTER, width= 200, minwidth = 50)
+    OrderTreeView.column("PaymentTerm", anchor = CENTER, width= 150, minwidth = 50)
     OrderTreeView.column("OrderDate", anchor = CENTER, width = 150, minwidth = 50)
-    OrderTreeView.column("VendorRemark", anchor = W, width = 420, minwidth = 50)
+    OrderTreeView.column("VendorRemark", anchor = W, width = 400, minwidth = 50)
+    OrderTreeView.column("TransCcy", anchor = W, width = 70, minwidth = 50)
     OrderTreeView.column("DateEntry", anchor = CENTER, width = 150, minwidth = 50)
     
     OrderTreeView.heading("#0", text = "Index")
     OrderTreeView.heading("PurOrderNum", text = "Purchase Order Number")
     OrderTreeView.heading("PaymentTerm", text = "Payment Term")
     OrderTreeView.heading("OrderDate", text = "Order Date")
+    OrderTreeView.heading("TransCcy", text = "Trans. Ccy")
     OrderTreeView.heading("VendorRemark", text = "Vendor Remark")
     OrderTreeView.heading("DateEntry", text = "Date of Entry")
 
@@ -500,14 +505,53 @@ def openPurchase():
             else:
                 addressFull = f"{vendorInfo[0][3]} ({vendorInfo[0][2]}) {vendorInfo[0][6]} {vendorInfo[0][5]} {vendorInfo[0][7]} {vendorInfo[0][4]}"
             OrderTreeView.insert(parent=f"M{rec[1][5:9]}", index=END, iid=rec[0], text="", 
-                                  values=(rec[1], rec[2], rec[3], addressFull, rec[5]))
+                                  values=(rec[1], rec[2], rec[3], addressFull, rec[5],
+                                          rec[6], rec[7]))
         curVend.close()
+        
+    def updateOrderCcy():
+        orderNumRef = PurOrderNumBox.get()
+        TransExRateUsed = TransExRateBox.get()
+        
+        curPur = connPur.cursor()
+        curPur.execute(f"SELECT * FROM `{orderNumRef}`")
+        fullLst = curPur.fetchall()
+        
+        SelectOIDLst = []
+        SGDCostLst = []
+        for val in fullLst:
+            SelectOIDLst.append(val[0])
+            SGDCostLst.append(val[10])
+        
+        def calcTrans(Cost, ExRate):
+            if Cost == None or Cost == "" or Cost == "None":
+                return None
+            else:
+                costVal = float(Cost)
+                exRateVal = 1/(float(ExRate))
+                return round(costVal * exRateVal, 2)
+        
+        TransCostLst = []
+        for val in SGDCostLst:
+            TransCostLst.append(calcTrans(val, TransExRateUsed))
+
+        updateCcyCost = f"""UPDATE `{orderNumRef}` SET
+        `CostTrans` = %s
+        
+        WHERE `oid` = %s"""
+                
+        for i in range(len(SelectOIDLst)):
+            inputs = (TransCostLst[i], SelectOIDLst[i])
+            curPur.execute(updateCcyCost, inputs)
+        connPur.commit()        
 
     def updateOrder():
         sqlCommand = f"""UPDATE PUR_ORDER_LIST SET
         `PaymentTerm` = %s,
         `OrderDate` = %s,
-        `VendorRemark` = %s
+        `VendorRemark` = %s,
+        `TransCcy` = %s,
+        `TransExRate` = %s
         
         WHERE `oid` = %s"""
         
@@ -521,7 +565,8 @@ def openPurchase():
                 return dateVar.get()
         
         inputs = (PaymentTermBox.get(), checkDateOrder(OrderDateBox),
-                  VendorRemarkBox.get(), selected)
+                  VendorRemarkBox.get(), TransCcyBox.get(), TransExRateBox.get(),
+                  selected)
         
         respUpdateOrder = messagebox.askokcancel("Confirmation",
                                                  "Update This Order?",
@@ -531,6 +576,8 @@ def openPurchase():
             curPur.execute(sqlCommand, inputs)
             connPur.commit()
             curPur.close()
+            
+            updateOrderCcy()
             
             clearEntryOrder()
             OrderTreeView.delete(*OrderTreeView.get_children())
@@ -547,9 +594,9 @@ def openPurchase():
         formatDate = timeNow.strftime('%Y-%m-%d %H:%M:%S')
         
         createComOrder = f"""INSERT INTO `PUR_ORDER_LIST` (
-        PurOrderNum, PaymentTerm, OrderDate, VendorRemark, DateEntry)
+        PurOrderNum, PaymentTerm, OrderDate, VendorRemark, TransCcy, TransExRate, DateEntry)
         
-        VALUES (%s, %s, %s, %s, %s)"""
+        VALUES (%s, %s, %s, %s, %s, %s, %s)"""
         
         def checkDateOrder(dateVar):
             if dateVar.get() == "":
@@ -559,7 +606,8 @@ def openPurchase():
         
         valueOrder = (PurOrderNumBox.get(), PaymentTermBox.get(), 
                       checkDateOrder(OrderDateBox),
-                      VendorRemarkBox.get(), formatDate)
+                      VendorRemarkBox.get(), TransCcyBox.get(),
+                      TransExRateBox.get(), formatDate)
         
         curPur = connPur.cursor()
         curPur.execute(createComOrder, valueOrder)
@@ -577,7 +625,9 @@ def openPurchase():
             `Tax` VARCHAR(20),
             `Vendor` VARCHAR(100),
             `UnitCost` VARCHAR(20),
-            `Currency` VARCHAR(20))
+            `Currency` VARCHAR(20),
+            `CostSGD` VARCHAR(20),
+            `CostTrans` VARCHAR(20))
         
             ENGINE = InnoDB
             DEFAULT CHARACTER SET = utf8mb4
@@ -757,6 +807,20 @@ def openPurchase():
             VendorRemarkBox.insert(0, recLst[0][4])
             VendorRemarkBox.config(state="readonly")
             
+            TransCcyBox.config(state="normal")
+            TransCcyBox.delete(0, END)
+            TransCcyBox.insert(0, recLst[0][5])
+            TransCcyBox.config(state="readonly")
+            
+            TransExRateBox.config(state="normal")
+            TransExRateBox.delete(0, END)
+            TransExRateBox.insert(0, recLst[0][6])
+            TransExRateBox.config(state="readonly")
+        
+        
+            
+            
+            
             buttonUpdatePur.config(state=NORMAL)
             buttonCreatePur.config(state=DISABLED)
             buttonDeletePur.config(state=NORMAL)
@@ -844,6 +908,12 @@ def openPurchase():
         OrderDateBox.delete(0, END)
         OrderDateBox.config(state="readonly")
         
+        TransCcyBox.current(0)
+        TransExRateBox.config(state="normal")
+        TransExRateBox.delete(0, END)
+        TransExRateBox.insert(0, 1)
+        TransExRateBox.config(state="readonly")        
+        
         VendorRemarkBox.config(state="normal")
         VendorRemarkBox.delete(0, END)
         VendorRemarkBox.config(state="readonly")
@@ -872,30 +942,28 @@ def openPurchase():
                 loadOrderCom()
     
     def loadOrderCom():
-        try:
-            buttonLoadPur.config(state=DISABLED)
-            
-            curPur = connPur.cursor()
-            selected = OrderTreeView.selection()[0]
-            sqlSelect = "SELECT * FROM PUR_ORDER_LIST WHERE oid = %s"
-            valSelect = (selected, )
-    
-            curPur.execute(sqlSelect, valSelect)
-            purSelect = curPur.fetchall()
-            
-            connPur.commit()
-            curPur.close() 
-    
-            PurOrderNumRef = purSelect[0][1]
-            VendorRef = purSelect[0][4]
-            
-            framePur = Frame(tabNoteRep)
-            tabNoteRep.add(framePur, text="Select Unit for Purchase Order")
-            framePur.columnconfigure(0, weight=1)
-            tabNoteRep.select(1)
-        except:
-            messagebox.showerror("Unable to Load", "Please Check Again",
-                                 parent=frameRep)
+        buttonLoadPur.config(state=DISABLED)
+        
+        curPur = connPur.cursor()
+        selected = OrderTreeView.selection()[0]
+        sqlSelect = "SELECT * FROM PUR_ORDER_LIST WHERE oid = %s"
+        valSelect = (selected, )
+
+        curPur.execute(sqlSelect, valSelect)
+        purSelect = curPur.fetchall()
+        
+        connPur.commit()
+        curPur.close() 
+
+        PurOrderNumRef = purSelect[0][1]
+        VendorRef = purSelect[0][4]
+        TransCcyUsed = purSelect[0][5]
+        
+        framePur = Frame(tabNoteRep)
+        tabNoteRep.add(framePur, text="Select Unit for Purchase Order")
+        framePur.columnconfigure(0, weight=1)
+        tabNoteRep.select(1)
+
 
 
 
@@ -1111,6 +1179,10 @@ def openPurchase():
             curPur = connPur.cursor()
             curPur.execute(f"SELECT * FROM `{PurOrderNumRef}`")
             recLst = curPur.fetchall()
+            
+            curPur.execute(f"SELECT * FROM `PUR_ORDER_LIST` WHERE PurOrderNum = '{PurOrderNumRef}'")
+            TransCcyVal = curPur.fetchall()[0][5]
+            
             connPur.commit()
             curPur.close() 
 
@@ -1118,7 +1190,9 @@ def openPurchase():
                 SelectTreeView.insert(parent="", index=END, iid=rec[0], 
                                       values=(rec[1], rec[2], rec[3], rec[4], 
                                               rec[5], f"{rec[6]} %", rec[7], 
-                                              f"{rec[8]} {rec[9]}"))
+                                              f"{rec[8]} {rec[9]}", 
+                                              f"{rec[10]} SGD", 
+                                              f"{rec[11]} {TransCcyVal}"))
                 
             # if recLst == []:
             #     TaxBox.config(state="normal")
@@ -1140,6 +1214,34 @@ def openPurchase():
                 
 
         
+        def CcyToSGD(Cost, Ccy):
+            if Ccy == "SGD":
+                ExRate = 1.00
+            elif Ccy in CountryRef.getCcyLst():
+                ExRate = CountryRef.getExRate(Ccy)
+            else:
+                ExRate = 0.00
+            
+            if Cost == None or Cost == "" or Cost == "None":
+                return None
+            else:
+                costVal = float(Cost)
+                return round(costVal * ExRate, 2)
+            
+        def SGDToCcy(Cost, Ccy):
+            if Ccy == "SGD":
+                ExRate = 1.00
+            elif Ccy in CountryRef.getCcyLst():
+                ExRate = 1/(CountryRef.getExRate(Ccy))
+            else:
+                ExRate = 0.00
+            
+            if Cost == None or Cost == "" or Cost == "None":
+                return None
+            else:
+                costVal = float(Cost)
+                return round(costVal * ExRate, 2)
+        
         def selectUnitPur():
             selIndex = ValTreeView.selection()
             if selIndex == ():
@@ -1154,14 +1256,21 @@ def openPurchase():
                     curPur = connPur.cursor()
                     selectUnitCom = f"""INSERT INTO `{PurOrderNumRef}` (
                     PartNum, Description, Maker, Spec, 
-                    REQ, Tax, Vendor, UnitCost, Currency)
+                    REQ, Tax, Vendor, UnitCost, Currency,
+                    CostSGD, CostTrans)
             
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)"""
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
                     
                     for index in selIndex:
                         rec = ValTreeView.item(index, "values")
+                        
+                        SGDVal = CcyToSGD(rec[16], rec[17])
+                        TransVal = SGDToCcy(SGDVal, TransCcyUsed)
+                        
                         valSelect = (formatUnitNum(rec[0]), rec[1], rec[5], rec[6], 
-                                     rec[10], "7", rec[15], rec[16], rec[17])
+                                     rec[10], "7", rec[15], rec[16], rec[17], 
+                                     SGDVal, TransVal)
+                        
                         curPur.execute(selectUnitCom, valSelect)
                         connPur.commit()    
                     curPur.close()
@@ -1194,10 +1303,16 @@ def openPurchase():
                     pass
             
         def closeTabPur():
-            framePur.destroy()
-            buttonLoadPur.config(state=NORMAL)
+            respCloseTabPur = messagebox.askokcancel("Confirmation",
+                                                     "Close This Tab?",
+                                                     parent=framePur)
+            if respCloseTabPur == True:
+                framePur.destroy()
+                buttonLoadPur.config(state=NORMAL)
+            else:
+                pass
         
-        
+
         
         def clearUnitData():
             ReqQtyBox.delete(0, END)
@@ -1248,7 +1363,12 @@ def openPurchase():
                     ValTreeView.selection_remove(selected[i])
             else:
                 pass
-            
+        
+        def refreshUnitData():
+            clearUnitData()
+            SelectTreeView.delete(*SelectTreeView.get_children())
+            queryTreeSelect()
+        
         def updateUnitData():
             sqlCommand = f"""UPDATE `{PurOrderNumRef}` SET
             REQ = %s,
@@ -1873,8 +1993,11 @@ def openPurchase():
                                    value=CountryRef.getCcyLst(), 
                                    width=8, state="readonly")
 
+        CurrencyBox.current(0)
+
         buttonClearData = Button(DataRepFrame, text="Clear", width=8, command=clearUnitData)
         buttonUpdateData = Button(DataRepFrame, text="Update", width=8, command=updateUnitData)
+        buttonRefreshData = Button(DataRepFrame, text="Refresh", width=8, command=refreshUnitData)
 
         # buttonDefaultCommon = Button(DataRepFrame, text="Default", width=8, command=defaultCommon)
         # buttonUpdateCommon = Button(DataRepFrame, text="Update", width=8, command=updateCommon)
@@ -1900,6 +2023,7 @@ def openPurchase():
         
         buttonClearData.grid(row=0, column=9, padx=(20,5), pady=5, sticky=W)
         buttonUpdateData.grid(row=0, column=10, padx=5, pady=5, sticky=W)
+        buttonRefreshData.grid(row=0, column=11, padx=5, pady=5, sticky=W)
         
         # buttonDefaultCommon.grid(row=1, column=4, padx=(20,5), pady=5, sticky=W)
         # buttonUpdateCommon.grid(row=1, column=5, padx=(5,10), pady=5, sticky=W)
@@ -1924,28 +2048,33 @@ def openPurchase():
         SelectTreeView.pack(padx=5, pady=5, ipadx=5, ipady=5, fill="x", expand=True)
         
         SelectTreeView["columns"] = ("Part", "Description", "Maker", "Spec", 
-                                     "REQ", "Tax", "Vendor", "UnitCost")
+                                     "REQ", "Tax", "Vendor", "UnitCost",
+                                     "SGDCost", "TransCost")
         
         # SelectTreeView.column("#0", anchor=CENTER, width=50)
         SelectTreeView.column("#0", width=0 ,stretch=NO)
         SelectTreeView.column("Part", anchor=CENTER, width=135)
-        SelectTreeView.column("Description", anchor=CENTER, width=260)
-        SelectTreeView.column("Maker", anchor=CENTER, width=140)
-        SelectTreeView.column("Spec", anchor=CENTER, width=240)
-        SelectTreeView.column("REQ", anchor=CENTER, width=120)
+        SelectTreeView.column("Description", anchor=CENTER, width=220)
+        SelectTreeView.column("Maker", anchor=CENTER, width=120)
+        SelectTreeView.column("Spec", anchor=CENTER, width=220)
+        SelectTreeView.column("REQ", anchor=CENTER, width=60)
         SelectTreeView.column("Tax", anchor=CENTER, width=60)
         SelectTreeView.column("Vendor", anchor=CENTER, width=120)
-        SelectTreeView.column("UnitCost", anchor=CENTER, width=100)
+        SelectTreeView.column("UnitCost", anchor=CENTER, width=80)
+        SelectTreeView.column("SGDCost", anchor=CENTER, width=80)
+        SelectTreeView.column("TransCost", anchor=CENTER, width=80)
     
         SelectTreeView.heading("#0", text="Index", anchor=W)
         SelectTreeView.heading("Part", text="Part", anchor=CENTER)
         SelectTreeView.heading("Description", text="Description", anchor=CENTER)
         SelectTreeView.heading("Maker", text="Maker", anchor=CENTER)
         SelectTreeView.heading("Spec", text="Maker Specification", anchor=CENTER)
-        SelectTreeView.heading("REQ", text="Require Quantity", anchor=CENTER)
+        SelectTreeView.heading("REQ", text="REQ", anchor=CENTER)
         SelectTreeView.heading("Tax", text="Tax", anchor=CENTER)
         SelectTreeView.heading("Vendor", text="Vendor", anchor=CENTER)
         SelectTreeView.heading("UnitCost", text="Unit Cost", anchor=CENTER)
+        SelectTreeView.heading("SGDCost", text="SGD Cost", anchor=CENTER)
+        SelectTreeView.heading("TransCost", text="Trans. Cost", anchor=CENTER)
 
         queryTreeSelect()
 
@@ -1991,6 +2120,8 @@ def openPurchase():
     PaymentTermLabel = Label(OrderDataFrame, text="Payment Term")
     OrderDateLabel = Label(OrderDataFrame, text="Order Date")
     VendorRemarkLabel = Label(OrderDataFrame, text="Vendor")
+    TransCcyLabel = Label(OrderDataFrame, text="Transaction Currency")
+    TransExRateLabel = Label(OrderDataFrame, text="Trans. Exchange Rate")
 
 
 
@@ -2005,10 +2136,39 @@ def openPurchase():
     VendorRemarkBox = Entry(OrderDataFrame, width=20, state="readonly")
     VendorSelectButton = Button(OrderDataFrame, text="List", width=5, command=vendorLstGen)
 
+    TransCcyBox = ttk.Combobox(OrderDataFrame, value=CountryRef.getCcyLst(), 
+                               width=10, state="readonly")
+    TransExRateBox = Entry(OrderDataFrame, width=12, state="readonly")
+    TransSGDLabel = Label(OrderDataFrame, text="SGD")
+
+    def getTransExRate(e):
+        Ccy = TransCcyBox.get()
+        if Ccy == "SGD":
+            TransExRateBox.config(state="normal")
+            TransExRateBox.delete(0, END)
+            TransExRateBox.insert(0, 1)
+            TransExRateBox.config(state="readonly")
+        elif Ccy in CountryRef.getCcyLst():
+            ExRate = CountryRef.getExRate(Ccy)
+            TransExRateBox.config(state="normal")
+            TransExRateBox.delete(0, END)
+            TransExRateBox.insert(0, ExRate)
+            TransExRateBox.config(state="readonly")
+        else:
+            TransExRateBox.config(state="normal")
+            TransExRateBox.delete(0, END)
+            TransExRateBox.insert(0, 0)
+            TransExRateBox.config(state="readonly")
+
+    TransCcyBox.bind("<<ComboboxSelected>>", getTransExRate)
+
     PurOrderNumLabel.grid(row=0, column=0, padx=10, pady=5, sticky=E)
     PaymentTermLabel.grid(row=1, column=0, padx=10, pady=5, sticky=E)
     OrderDateLabel.grid(row=2, column=0, padx=10, pady=5, sticky=E)
     VendorRemarkLabel.grid(row=3, column=0, padx=10, pady=5, sticky=E)
+    
+    TransCcyLabel.grid(row=0, column=3, padx=10, pady=5, sticky=E)
+    TransExRateLabel.grid(row=1, column=3, padx=10, pady=5, sticky=E)
 
     PurOrderNumBox.grid(row=0, column=1, padx=10, pady=5, sticky=W)
     OrderNumGenButton.grid(row=0, column=2, padx=(0,10), pady=5, sticky=W)
@@ -2019,9 +2179,22 @@ def openPurchase():
     OrderDateBox.grid(row=2, column=1, padx=10, pady=5, sticky=W)
     OrderDateCalendarButton.grid(row=2, column=2, padx=(0,10), pady=5, sticky=W)
     
-    VendorRemarkBox.grid(row=3, column=1, columnspan=4, padx=10, pady=5, sticky=W)
-    VendorSelectButton.grid(row=3, column=2, columnspan=4, padx=(0,10), pady=5, sticky=W)
-
+    VendorRemarkBox.grid(row=3, column=1, padx=10, pady=5, sticky=W)
+    VendorSelectButton.grid(row=3, column=2, padx=(0,10), pady=5, sticky=W)
+    # ABOVE GOT 2 columnspan = 4
+    
+    TransCcyBox.grid(row=0, column=4, columnspan=2, padx=10, pady=5, sticky=W)
+    TransExRateBox.grid(row=1, column=4, padx=10, pady=5, sticky=W)
+    TransSGDLabel.grid(row=1, column=5, padx=(0,10), pady=5, sticky=W)
+    
+    TransCcyBox.current(0)
+    TransExRateBox.config(state="normal")
+    TransExRateBox.delete(0, END)
+    TransExRateBox.insert(0, 1)
+    TransExRateBox.config(state="readonly")
+    
+    
+    
     
     buttonUpdatePur = Button(OrderButtonFrame, text="Update Order", command=updateOrder, state=DISABLED)
     buttonCreatePur = Button(OrderButtonFrame, text="Create New Purchase Order", command=createOrder)
