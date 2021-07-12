@@ -997,7 +997,7 @@ def openPurchase():
                     ValTreeView.insert(parent="", index=END, iid=rec[0],
                                         values=(rec[1], rec[2], rec[3], rec[4], rec[5], rec[6], rec[7], 
                                                 rec[8], rec[9], rec[10], rec[11], rec[12], rec[13], 
-                                                rec[14], rec[15], rec[16], rec[17], rec[18]))
+                                                rec[14], rec[15], rec[17], rec[18], rec[20]))
                     
         framePMA = Frame(framePur)
         framePMA.grid(row=0, column=0, columnspan=2, padx=10, pady=0, ipadx=10, ipady=0 , sticky=W+E)
@@ -1058,17 +1058,18 @@ def openPurchase():
         
         ValTreeView["columns"] = ("Part", "Description", "D", "CLS", "V", 
                                     "Maker", "Spec", "DES", "SPA", "OH", "REQ", 
-                                    "PCH", "BAL", "RCV", "ADJ", "Vendor", "UnitCost")
+                                    "PCH", "BAL", "RCV", "OS", "Vendor", "UnitCost",
+                                    "Currency")
         
         # ValTreeView.column("#0", anchor=CENTER, width=50)
         ValTreeView.column("#0", width=0 ,stretch=NO)
         ValTreeView.column("Part", anchor=CENTER, width=45)
-        ValTreeView.column("Description", anchor=CENTER, width=200)
+        ValTreeView.column("Description", anchor=CENTER, width=160)
         ValTreeView.column("D", anchor=CENTER, width=30)
         ValTreeView.column("CLS", anchor=CENTER, width=60)
         ValTreeView.column("V", anchor=CENTER, width=30)
         ValTreeView.column("Maker", anchor=CENTER, width=100)
-        ValTreeView.column("Spec", anchor=CENTER, width=200)
+        ValTreeView.column("Spec", anchor=CENTER, width=180)
         ValTreeView.column("DES", anchor=CENTER, width=40)
         ValTreeView.column("SPA", anchor=CENTER, width=40)
         ValTreeView.column("OH", anchor=CENTER, width=40)
@@ -1076,9 +1077,10 @@ def openPurchase():
         ValTreeView.column("PCH", anchor=CENTER, width=40)
         ValTreeView.column("BAL", anchor=CENTER, width=40)
         ValTreeView.column("RCV", anchor=CENTER, width=40)
-        ValTreeView.column("ADJ", anchor=CENTER, width=40)
+        ValTreeView.column("OS", anchor=CENTER, width=40)
         ValTreeView.column("Vendor", anchor=CENTER, width=100)
-        ValTreeView.column("UnitCost", anchor=CENTER, width=90)
+        ValTreeView.column("UnitCost", anchor=CENTER, width=80)
+        ValTreeView.column("Currency", anchor=CENTER, width=60)
     
         ValTreeView.heading("#0", text="Index", anchor=CENTER)
         ValTreeView.heading("Part", text="Part", anchor=CENTER)
@@ -1095,9 +1097,10 @@ def openPurchase():
         ValTreeView.heading("PCH", text="PCH", anchor=CENTER)
         ValTreeView.heading("BAL", text="BAL", anchor=CENTER)
         ValTreeView.heading("RCV", text="RCV", anchor=CENTER)
-        ValTreeView.heading("ADJ", text="ADJ", anchor=CENTER)
+        ValTreeView.heading("OS", text="OS", anchor=CENTER)
         ValTreeView.heading("Vendor", text="Vendor", anchor=CENTER)
         ValTreeView.heading("UnitCost", text="Unit Cost", anchor=CENTER)
+        ValTreeView.heading("Currency", text="Currency", anchor=CENTER)
         
         def formatUnitNum(num):
             threeDigit = str(num).rjust(3, "0")
@@ -1114,61 +1117,81 @@ def openPurchase():
             for rec in recLst:
                 SelectTreeView.insert(parent="", index=END, iid=rec[0], 
                                       values=(rec[1], rec[2], rec[3], rec[4], 
-                                              rec[5], rec[6], rec[7], rec[8]))
+                                              rec[5], f"{rec[6]} %", rec[7], 
+                                              f"{rec[8]} {rec[9]}"))
                 
-            if recLst == []:
-                TaxBox.config(state="normal")
-                TaxBox.delete(0, END)
-                TaxBox.insert(0, "NIL")
-                CurrencyBox.config(state="normal")
-                CurrencyBox.delete(0, END)
-                CurrencyBox.insert(0, "NIL")
-                CurrencyBox.config(state="readonly")
+            # if recLst == []:
+            #     TaxBox.config(state="normal")
+            #     TaxBox.delete(0, END)
+            #     TaxBox.insert(0, "NIL")
+            #     CurrencyBox.config(state="normal")
+            #     CurrencyBox.delete(0, END)
+            #     CurrencyBox.insert(0, "NIL")
+            #     CurrencyBox.config(state="readonly")
             
-            else:
-                TaxBox.config(state="normal")
-                TaxBox.delete(0, END)
-                TaxBox.insert(0, recLst[0][6])
-                CurrencyBox.config(state="normal")
-                CurrencyBox.delete(0, END)
-                CurrencyBox.insert(0, recLst[0][9])
-                CurrencyBox.config(state="readonly")
+            # else:
+            #     TaxBox.config(state="normal")
+            #     TaxBox.delete(0, END)
+            #     TaxBox.insert(0, recLst[0][6])
+            #     CurrencyBox.config(state="normal")
+            #     CurrencyBox.delete(0, END)
+            #     CurrencyBox.insert(0, recLst[0][9])
+            #     CurrencyBox.config(state="readonly")
                 
 
         
-        def selectUnit():
+        def selectUnitPur():
             selIndex = ValTreeView.selection()
             if selIndex == ():
-                pass
+                messagebox.showerror("Unable to Select",
+                                     "Please Select a Part",
+                                     parent=framePur)
             else:
-                curPur = connPur.cursor()
-                selectUnitCom = f"""INSERT INTO `{PurOrderNumRef}` (
-                PartNum, Description, Maker, Spec, 
-                REQ, Tax, Vendor, UnitCost, Currency)
-        
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)"""
+                respSelectUnitTree = messagebox.askokcancel("Confirmation",
+                                                            f"Select {len(selIndex)} Units?",
+                                                            parent=framePur)
+                if respSelectUnitTree == True:
+                    curPur = connPur.cursor()
+                    selectUnitCom = f"""INSERT INTO `{PurOrderNumRef}` (
+                    PartNum, Description, Maker, Spec, 
+                    REQ, Tax, Vendor, UnitCost, Currency)
+            
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)"""
+                    
+                    for index in selIndex:
+                        rec = ValTreeView.item(index, "values")
+                        valSelect = (formatUnitNum(rec[0]), rec[1], rec[5], rec[6], 
+                                     rec[10], "7", rec[15], rec[16], rec[17])
+                        curPur.execute(selectUnitCom, valSelect)
+                        connPur.commit()    
+                    curPur.close()
                 
-                for index in selIndex:
-                    rec = ValTreeView.item(index, "values")
-                    valSelect = (formatUnitNum(rec[0]), rec[1], rec[6], rec[7], 
-                                 rec[11], "7%", rec[16], rec[17], "SGD")
-                    curPur.execute(selectUnitCom, valSelect)
-                    connPur.commit()    
-                curPur.close()
-                
-            SelectTreeView.delete(*SelectTreeView.get_children())
-            queryTreeSelect()
+                    SelectTreeView.delete(*SelectTreeView.get_children())
+                    queryTreeSelect()
+                else:
+                    pass
     
-        def deleteUnit():
-            selected = SelectTreeView.selection()
-            curPur = connPur.cursor()
-            for i in selected:
-                curPur.execute(f"DELETE from `{PurOrderNumRef}` WHERE oid={i}")
-                
-            connPur.commit()
-            curPur.close() 
-            SelectTreeView.delete(*SelectTreeView.get_children())
-            queryTreeSelect()
+        def deleteUnitPur():
+            selDelete = SelectTreeView.selection()
+            if selDelete == ():
+                messagebox.showerror("Unable to Delete",
+                                     "Please Select a Part",
+                                     parent=framePur)
+            else:
+                respDeleteUnitTree = messagebox.askokcancel("Confirmation",
+                                                            f"Delete {len(selDelete)} Units?",
+                                                            parent=framePur)
+                if respDeleteUnitTree == True:
+                    curPur = connPur.cursor()
+                    for i in selDelete:
+                        curPur.execute(f"DELETE from `{PurOrderNumRef}` WHERE oid={i}")
+
+                    connPur.commit()
+                    curPur.close() 
+                    SelectTreeView.delete(*SelectTreeView.get_children())
+                    queryTreeSelect()
+                else:
+                    pass
             
         def closeTabPur():
             framePur.destroy()
@@ -1179,86 +1202,131 @@ def openPurchase():
         def clearUnitData():
             ReqQtyBox.delete(0, END)
             UnitCostSelectBox.delete(0, END)
+            TaxBox.delete(0, END)
+            TaxBox.insert(0, 0)
+            CurrencyBox.current(0)
             
         def selectUnitData(e):
-            selected = SelectTreeView.selection()[0]
-            curPur = connPur.cursor()
-            curPur.execute(f"SELECT * from `{PurOrderNumRef}` WHERE oid={selected}")
+            selVal = SelectTreeView.selection()
+            if selVal == ():
+                messagebox.showerror("Error",
+                                     "Please Select a Part",
+                                     parent=framePur)
+            else:
+                selected = selVal[0]
+                curPur = connPur.cursor()
+                curPur.execute(f"SELECT * from `{PurOrderNumRef}` WHERE oid={selected}")
+                
+                unitVal = curPur.fetchall()
+                clearUnitData()
+                
+                TaxBox.delete(0, END)
+                CurrencyBox.config(state="normal")
+                CurrencyBox.delete(0, END)
+                CurrencyBox.config(state="readonly")
+                
+                ReqQtyBox.insert(0, unitVal[0][5])
+                UnitCostSelectBox.insert(0, unitVal[0][8])
+                TaxBox.insert(0, unitVal[0][6])
+                CurrencyBox.config(state="normal")
+                CurrencyBox.insert(0, unitVal[0][9])
+                CurrencyBox.config(state="readonly")
             
-            unitVal = curPur.fetchall()
-            clearUnitData()
+        def deselectUnitData(e):
+            selected = SelectTreeView.selection()
+            if len(selected) > 0:
+                for i in range(len(selected)):
+                    SelectTreeView.selection_remove(selected[i])
+                clearUnitData()
+            else:
+                clearUnitData()
+                
+        def deselectUnitValue(e):
+            selected = ValTreeView.selection()
+            if len(selected) > 0:
+                for i in range(len(selected)):
+                    ValTreeView.selection_remove(selected[i])
+            else:
+                pass
             
-            ReqQtyBox.insert(0, unitVal[0][5])
-            UnitCostSelectBox.insert(0, unitVal[0][8])
-        
         def updateUnitData():
             sqlCommand = f"""UPDATE `{PurOrderNumRef}` SET
             REQ = %s,
-            UnitCost = %s
+            UnitCost = %s,
+            Tax = %s,
+            Currency = %s
+            
             WHERE oid = %s
             """
-
-            selected = SelectTreeView.selection()[0]
             
-            inputs = (ReqQtyBox.get(), UnitCostSelectBox.get(), selected)
-            
-            response = messagebox.askokcancel("Confirmation", "Confirm Update", parent=RepWin)
-            if response == True:
-                curPur = connPur.cursor()
-                curPur.execute(sqlCommand, inputs)
-                connPur.commit()
-                curPur.close()
-
-                clearUnitData()
-                SelectTreeView.delete(*SelectTreeView.get_children())
-                queryTreeSelect()
-                
-                messagebox.showinfo("Update Successful", 
-                                    f"You Have Updated This Part", parent=RepWin) 
+            selVal = SelectTreeView.selection()
+            if len(selVal) != 1:
+                messagebox.showerror("Error",
+                                     "Please Select One Part ONLY",
+                                     parent=framePur)
             else:
-                pass
+                selected = selVal[0]
+                
+                inputs = (ReqQtyBox.get(), UnitCostSelectBox.get(), 
+                          TaxBox.get(), CurrencyBox.get(), selected)
+                
+                response = messagebox.askokcancel("Confirmation", "Confirm Update", parent=RepWin)
+                if response == True:
+                    curPur = connPur.cursor()
+                    curPur.execute(sqlCommand, inputs)
+                    connPur.commit()
+                    curPur.close()
+    
+                    clearUnitData()
+                    SelectTreeView.delete(*SelectTreeView.get_children())
+                    queryTreeSelect()
+                    
+                    messagebox.showinfo("Update Successful", 
+                                        f"You Have Updated This Part", parent=RepWin) 
+                else:
+                    pass
 
         def updateUnitDataClick(e):
             updateUnitData()
 
-        def defaultCommon():
-            curPur = connPur.cursor()
-            curPur.execute(f"SELECT * FROM `{PurOrderNumRef}`")
-            recLst = curPur.fetchall()
-            connPur.commit()
-            curPur.close() 
+        # def defaultCommon():
+        #     curPur = connPur.cursor()
+        #     curPur.execute(f"SELECT * FROM `{PurOrderNumRef}`")
+        #     recLst = curPur.fetchall()
+        #     connPur.commit()
+        #     curPur.close() 
             
-            TaxBox.config(state="normal")
-            TaxBox.delete(0, END)
-            TaxBox.insert(0, recLst[0][6])
-            CurrencyBox.config(state="normal")
-            CurrencyBox.delete(0, END)
-            CurrencyBox.insert(0, recLst[0][9])
-            CurrencyBox.config(state="readonly")
+        #     TaxBox.config(state="normal")
+        #     TaxBox.delete(0, END)
+        #     TaxBox.insert(0, recLst[0][6])
+        #     CurrencyBox.config(state="normal")
+        #     CurrencyBox.delete(0, END)
+        #     CurrencyBox.insert(0, recLst[0][9])
+        #     CurrencyBox.config(state="readonly")
         
-        def updateCommon():
-            sqlComTax = f"""UPDATE `{PurOrderNumRef}` SET
-            Tax = %s,
-            Currency = %s
-            """
+        # def updateCommon():
+        #     sqlComTax = f"""UPDATE `{PurOrderNumRef}` SET
+        #     Tax = %s,
+        #     Currency = %s
+        #     """
 
-            inputs = (TaxBox.get(), CurrencyBox.get())
+        #     inputs = (TaxBox.get(), CurrencyBox.get())
             
-            response = messagebox.askokcancel("Confirm Update", "This will Update ALL ROWS", parent=RepWin)
-            if response == True:
-                curPur = connPur.cursor()
-                curPur.execute(sqlComTax, inputs)
-                connPur.commit()
-                curPur.close()
+        #     response = messagebox.askokcancel("Confirm Update", "This will Update ALL ROWS", parent=RepWin)
+        #     if response == True:
+        #         curPur = connPur.cursor()
+        #         curPur.execute(sqlComTax, inputs)
+        #         connPur.commit()
+        #         curPur.close()
 
-                clearUnitData()
-                SelectTreeView.delete(*SelectTreeView.get_children())
-                queryTreeSelect()
+        #         clearUnitData()
+        #         SelectTreeView.delete(*SelectTreeView.get_children())
+        #         queryTreeSelect()
                 
-                messagebox.showinfo("Update Successful", 
-                                    f"You Have Updated Tax and Currency", parent=RepWin) 
-            else:
-                pass
+        #         messagebox.showinfo("Update Successful", 
+        #                             f"You Have Updated Tax and Currency", parent=RepWin) 
+        #     else:
+        #         pass
 
 
 
@@ -1269,189 +1337,200 @@ def openPurchase():
 
 
 
-        def genPurOrder():
-            curCom = connCom.cursor()
-            curCom.execute("SELECT * FROM COMPANY_MWA")
-            companyInfo = curCom.fetchall()
+        # def genPurOrder():
+        #     curCom = connCom.cursor()
+        #     curCom.execute("SELECT * FROM COMPANY_MWA")
+        #     companyInfo = curCom.fetchall()
             
-            curPur = connPur.cursor() 
-            curPur.execute(f"SELECT * FROM PUR_ORDER_LIST WHERE PurOrderNum = '{PurOrderNumRef}'")
-            purOrderInfo = curPur.fetchall()
+        #     curPur = connPur.cursor() 
+        #     curPur.execute(f"SELECT * FROM PUR_ORDER_LIST WHERE PurOrderNum = '{PurOrderNumRef}'")
+        #     purOrderInfo = curPur.fetchall()
             
-            curPur.execute(f"SELECT * FROM `{PurOrderNumRef}`")
-            purOrderUnit = curPur.fetchall()
+        #     curPur.execute(f"SELECT * FROM `{PurOrderNumRef}`")
+        #     purOrderUnit = curPur.fetchall()
             
-            curVend = connVend.cursor()
-            curVend.execute(f"SELECT * FROM VENDOR_LIST WHERE VENDOR_NAME = '{VendorRef}'")
-            vendorInfo = curVend.fetchall()
+        #     curVend = connVend.cursor()
+        #     curVend.execute(f"SELECT * FROM VENDOR_LIST WHERE VENDOR_NAME = '{VendorRef}'")
+        #     vendorInfo = curVend.fetchall()
             
-            curPur.close()
-            curVend.close()
+        #     curPur.close()
+        #     curVend.close()
             
-            def totalCostCalc(Qty, OneCost):
-                QtyNum = float(Qty) if Qty else 0
-                OneCostNum = float(OneCost) if OneCost else 0
-                total = QtyNum * OneCostNum
-                totalDigit = str("{:.2f}".format(total))
-                return totalDigit
             
-            unitDataLst = [["Index", "Part No.", "Description", "Maker Spec", "Quantity", 
-                            "Tax", "Unit Cost", "Total Cost"]]
-            for i in range(0, len(purOrderUnit)):
-                unitDataLst.append([str(i+1), purOrderUnit[i][1], purOrderUnit[i][2],
-                                    purOrderUnit[i][4], purOrderUnit[i][5], 
-                                    purOrderUnit[i][6], 
-                                    str("{:.2f}".format(float(purOrderUnit[i][8]) if purOrderUnit[i][8] else 0)) + " " + str(purOrderUnit[0][9]), 
-                                    str(totalCostCalc(purOrderUnit[i][5], purOrderUnit[i][8])) + " " + str(purOrderUnit[0][9])])
-
-            class PurOrder(FPDF):
-                def footer(self):
-                    self.set_y(-15) # 15 mm above from bottom
-                    self.set_font("Arial", "I", 10) # 10 Font Size
-                    self.cell(0, 10, f"Page {self.page_no()} / {{nb}}", align="C")
+            
+            
+            
+            
+            
+            
+            
+            
+            # NOT APPLICABLE
+            
+            # def totalCostCalc(Qty, OneCost):
+            #     QtyNum = float(Qty) if Qty else 0
+            #     OneCostNum = float(OneCost) if OneCost else 0
+            #     total = QtyNum * OneCostNum
+            #     totalDigit = str("{:.2f}".format(total))
+            #     return totalDigit
+            
+            # unitDataLst = [["Index", "Part No.", "Description", "Maker Spec", "Quantity", 
+            #                 "Tax", "Unit Cost", "Total Cost"]]
+            # for i in range(0, len(purOrderUnit)):
+            #     unitDataLst.append([str(i+1), purOrderUnit[i][1], purOrderUnit[i][2],
+            #                         purOrderUnit[i][4], purOrderUnit[i][5], 
+            #                         purOrderUnit[i][6], 
+            #                         str("{:.2f}".format(float(purOrderUnit[i][8]) if purOrderUnit[i][8] else 0)) + " " + str(purOrderUnit[0][9]), 
+            #                         str(totalCostCalc(purOrderUnit[i][5], purOrderUnit[i][8])) + " " + str(purOrderUnit[0][9])])
+            
+            # class PurOrder(FPDF):
+            #     def footer(self):
+            #         self.set_y(-15) # 15 mm above from bottom
+            #         self.set_font("Arial", "I", 10) # 10 Font Size
+            #         self.cell(0, 10, f"Page {self.page_no()} / {{nb}}", align="C")
                 
-                def companyDetail(self):
-                    self.image("MWA.jpg", x=10, y=8, h=25)
-                    self.set_font("Arial", "", 20)
-                    self.cell(w=0, h=25, txt="PURCHASE ORDER", align="R", border=False, ln=True)
+            #     def companyDetail(self):
+            #         self.image("MWA.jpg", x=10, y=8, h=25)
+            #         self.set_font("Arial", "", 20)
+            #         self.cell(w=0, h=25, txt="PURCHASE ORDER", align="R", border=False, ln=True)
                     
-                    self.set_font("Arial", "", 8)
-                    self.cell(w=60, h=3, txt=f"Company Reg. No: {companyInfo[0][2]}", align="L")
-                    self.cell(w=50, h=3, txt="Purchase Order Date", align="R")
-                    self.cell(w=0, h=3, txt="Vendor", align="R", ln=True)
+            #         self.set_font("Arial", "", 8)
+            #         self.cell(w=60, h=3, txt=f"Company Reg. No: {companyInfo[0][2]}", align="L")
+            #         self.cell(w=50, h=3, txt="Purchase Order Date", align="R")
+            #         self.cell(w=0, h=3, txt="Vendor", align="R", ln=True)
                     
-                    self.cell(w=60, h=3, txt=f"GST Reg. No: {companyInfo[0][3]}", align="L")
-                    self.cell(w=50, h=3, txt=f"{purOrderInfo[0][3]}", align="R") # Order Date
-                    self.cell(w=0, h=3, txt=f"{vendorInfo[0][3]}", align="R", ln=True)
+            #         self.cell(w=60, h=3, txt=f"GST Reg. No: {companyInfo[0][3]}", align="L")
+            #         self.cell(w=50, h=3, txt=f"{purOrderInfo[0][3]}", align="R") # Order Date
+            #         self.cell(w=0, h=3, txt=f"{vendorInfo[0][3]}", align="R", ln=True)
                     
-                    self.cell(w=60, h=3, txt=f"{companyInfo[0][1]}", align="L")
-                    self.cell(w=50, h=3, txt="", align="R")
-                    self.cell(w=0, h=3, txt=f"{vendorInfo[0][8]}", align="R", ln=True)
+            #         self.cell(w=60, h=3, txt=f"{companyInfo[0][1]}", align="L")
+            #         self.cell(w=50, h=3, txt="", align="R")
+            #         self.cell(w=0, h=3, txt=f"{vendorInfo[0][8]}", align="R", ln=True)
                     
-                    self.cell(w=60, h=3, txt=f"{companyInfo[0][4]} {companyInfo[0][5]}", align="L")
-                    self.cell(w=50, h=3, txt="Purchase Order No.", align="R")
-                    self.cell(w=0, h=3, txt=f"{vendorInfo[0][9]}", align="R", ln=True)
+            #         self.cell(w=60, h=3, txt=f"{companyInfo[0][4]} {companyInfo[0][5]}", align="L")
+            #         self.cell(w=50, h=3, txt="Purchase Order No.", align="R")
+            #         self.cell(w=0, h=3, txt=f"{vendorInfo[0][9]}", align="R", ln=True)
                     
-                    self.cell(w=60, h=3, txt=f"{companyInfo[0][6]}", align="L")
-                    self.cell(w=50, h=3, txt=f"{purOrderInfo[0][1]}", align="R")
-                    self.cell(w=0, h=3, 
-                              txt=f"{vendorInfo[0][6]} {vendorInfo[0][5]} Postal {vendorInfo[0][7]}", 
-                              align="R", ln=True)
+            #         self.cell(w=60, h=3, txt=f"{companyInfo[0][6]}", align="L")
+            #         self.cell(w=50, h=3, txt=f"{purOrderInfo[0][1]}", align="R")
+            #         self.cell(w=0, h=3, 
+            #                   txt=f"{vendorInfo[0][6]} {vendorInfo[0][5]} Postal {vendorInfo[0][7]}", 
+            #                   align="R", ln=True)
                     
-                    self.cell(w=60, h=3, txt=f"{companyInfo[0][7]}", align="L")
-                    self.cell(w=50, h=3, txt="", align="R")
-                    self.cell(w=0, h=3, txt=f"{vendorInfo[0][4]}", align="R", ln=True)
+            #         self.cell(w=60, h=3, txt=f"{companyInfo[0][7]}", align="L")
+            #         self.cell(w=50, h=3, txt="", align="R")
+            #         self.cell(w=0, h=3, txt=f"{vendorInfo[0][4]}", align="R", ln=True)
                     
-                    self.cell(w=60, h=3, txt=f"Contact No.: {companyInfo[0][8]}", align="L")
-                    self.cell(w=50, h=3, txt="Payment Terms", align="R")
-                    self.cell(w=0, h=3, txt=f"POC: {vendorInfo[0][11]}", align="R", ln=True)
+            #         self.cell(w=60, h=3, txt=f"Contact No.: {companyInfo[0][8]}", align="L")
+            #         self.cell(w=50, h=3, txt="Payment Terms", align="R")
+            #         self.cell(w=0, h=3, txt=f"POC: {vendorInfo[0][11]}", align="R", ln=True)
                             
-                    self.cell(w=60, h=3, txt=f"Email: {companyInfo[0][9]}", align="L")
-                    self.cell(w=50, h=3, txt=f"{purOrderInfo[0][2]}", align="R")
-                    self.cell(w=0, h=3, txt=f"Contact: {vendorInfo[0][12]}", align="R", ln=True)
+            #         self.cell(w=60, h=3, txt=f"Email: {companyInfo[0][9]}", align="L")
+            #         self.cell(w=50, h=3, txt=f"{purOrderInfo[0][2]}", align="R")
+            #         self.cell(w=0, h=3, txt=f"Contact: {vendorInfo[0][12]}", align="R", ln=True)
                     
-                    self.cell(w=60, h=3, txt="", align="L")
-                    self.cell(w=50, h=3, txt="", align="R")
-                    self.cell(w=0, h=3, txt=f"{vendorInfo[0][13]}", align="R", ln=True)
+            #         self.cell(w=60, h=3, txt="", align="L")
+            #         self.cell(w=50, h=3, txt="", align="R")
+            #         self.cell(w=0, h=3, txt=f"{vendorInfo[0][13]}", align="R", ln=True)
                     
-                    self.ln(10)
+            #         self.ln(10)
                 
-                def columnWidth(self, lstRef): # Get the Maximum Width of Each Column  
-                    pageWidthMargin = self.w - 20
-                    fontSize = 10
-                    while True:
-                        self.set_font("Arial", "", fontSize)
-                        colLenLst = []
-                        for i in range(len(lstRef[0])): # Select Rows 1 2 3
-                            strLenLst = []
-                            for j in range(len(lstRef)): # Select Columns 1 2 3
-                                val = lstRef[j][i]
-                                strLen = self.get_string_width(val) + 5
-                                strLenLst.append(strLen)
-                            colLenLst.append(max(strLenLst))
-                        if sum(colLenLst) <= pageWidthMargin:
-                            break
-                        else:
-                            fontSize = fontSize - 0.5
-                    return colLenLst
+            #     def columnWidth(self, lstRef): # Get the Maximum Width of Each Column  
+            #         pageWidthMargin = self.w - 20
+            #         fontSize = 10
+            #         while True:
+            #             self.set_font("Arial", "", fontSize)
+            #             colLenLst = []
+            #             for i in range(len(lstRef[0])): # Select Rows 1 2 3
+            #                 strLenLst = []
+            #                 for j in range(len(lstRef)): # Select Columns 1 2 3
+            #                     val = lstRef[j][i]
+            #                     strLen = self.get_string_width(val) + 5
+            #                     strLenLst.append(strLen)
+            #                 colLenLst.append(max(strLenLst))
+            #             if sum(colLenLst) <= pageWidthMargin:
+            #                 break
+            #             else:
+            #                 fontSize = fontSize - 0.5
+            #         return colLenLst
                 
-                def printHeading(self, lst):
-                    self.set_fill_color(200, 220, 255)
-                    for i in range(len(lst[0])):
-                        strWidth = self.columnWidth(lst)[i]
-                        self.cell(strWidth, 5, lst[0][i], border=True, ln=False, fill=True, align="C")
+            #     def printHeading(self, lst):
+            #         self.set_fill_color(200, 220, 255)
+            #         for i in range(len(lst[0])):
+            #             strWidth = self.columnWidth(lst)[i]
+            #             self.cell(strWidth, 5, lst[0][i], border=True, ln=False, fill=True, align="C")
                 
-                def printContent(self, lst):
-                    for i in range(1, len(lst)):
-                        self.ln()
-                        for j in range(len(lst[0])):
-                            strWidth = self.columnWidth(lst)[j]
-                            self.cell(strWidth, 5, lst[i][j], border=True)
-                    self.ln(10)
+            #     def printContent(self, lst):
+            #         for i in range(1, len(lst)):
+            #             self.ln()
+            #             for j in range(len(lst[0])):
+            #                 strWidth = self.columnWidth(lst)[j]
+            #                 self.cell(strWidth, 5, lst[i][j], border=True)
+            #         self.ln(10)
                     
-                def printTotal(self, lst):
-                    costLst = []
-                    for i in range(1, len(lst)):
-                        val = re.sub("[^0-9^.]", "", lst[i][7])
-                        costLst.append(float(val))
-                    subTotal = sum(costLst)
-                    GST = subTotal * float(str(purOrderUnit[0][6]).strip("%"))/100
-                    totalSGD = subTotal + GST
+            #     def printTotal(self, lst):
+            #         costLst = []
+            #         for i in range(1, len(lst)):
+            #             val = re.sub("[^0-9^.]", "", lst[i][7])
+            #             costLst.append(float(val))
+            #         subTotal = sum(costLst)
+            #         GST = subTotal * float(str(purOrderUnit[0][6]).strip("%"))/100
+            #         totalSGD = subTotal + GST
                     
-                    subTotalStr = str("{:.2f}".format(subTotal)) + " " + str(purOrderUnit[0][9])
-                    GSTStr = str("{:.2f}".format(GST)) + " " + str(purOrderUnit[0][9])
-                    totalStr = str("{:.2f}".format(totalSGD)) + " " + str(purOrderUnit[0][9])
+            #         subTotalStr = str("{:.2f}".format(subTotal)) + " " + str(purOrderUnit[0][9])
+            #         GSTStr = str("{:.2f}".format(GST)) + " " + str(purOrderUnit[0][9])
+            #         totalStr = str("{:.2f}".format(totalSGD)) + " " + str(purOrderUnit[0][9])
                     
-                    self.set_font("Arial", "", 10)
-                    self.cell(w=185, h=5, txt=f"Subtotal   {subTotalStr}", align="R", ln=True)
-                    self.cell(w=185, h=5, txt=f"GST   {GSTStr}", align="R", ln=True)
-                    self.cell(w=185, h=5, txt=f"Total   {totalStr}", align="R", ln=True)
+            #         self.set_font("Arial", "", 10)
+            #         self.cell(w=185, h=5, txt=f"Subtotal   {subTotalStr}", align="R", ln=True)
+            #         self.cell(w=185, h=5, txt=f"GST   {GSTStr}", align="R", ln=True)
+            #         self.cell(w=185, h=5, txt=f"Total   {totalStr}", align="R", ln=True)
                     
-                def printNotes(self):
-                    self.set_font("Arial", "", 8)
-                    self.cell(w=0, h=5, txt="NOTES:", ln=True, align="L")
-                    self.cell(w=0, h=5, txt="1. Please acknowledge receipt & delivery date on our P.O. by chop & sign and email it back to us immediately.",
-                              ln=True, align="L")
-                    self.cell(w=0, h=5, txt="2. Purchase Order Number must indicate on all the delivery orders and invoices",
-                              ln=True, align="L")
+            #     def printNotes(self):
+            #         self.set_font("Arial", "", 8)
+            #         self.cell(w=0, h=5, txt="NOTES:", ln=True, align="L")
+            #         self.cell(w=0, h=5, txt="1. Please acknowledge receipt & delivery date on our P.O. by chop & sign and email it back to us immediately.",
+            #                   ln=True, align="L")
+            #         self.cell(w=0, h=5, txt="2. Purchase Order Number must indicate on all the delivery orders and invoices",
+            #                   ln=True, align="L")
                     
-                    self.ln(30)
+            #         self.ln(30)
                     
-                    self.cell(w=100, h=5, txt="________________________________________", align="L")
-                    self.cell(w=100, h=5, txt="______________________________", ln=True, align="L")
-                    self.cell(w=100, h=5, txt="SUPPLIER hereby confirm acceptance of this Order", 
-                              align="L")
-                    self.cell(w=100, h=5, txt="MOTIONWELL Automation Pte. Ltd.",
-                              ln=True, align="L")
+            #         self.cell(w=100, h=5, txt="________________________________________", align="L")
+            #         self.cell(w=100, h=5, txt="______________________________", ln=True, align="L")
+            #         self.cell(w=100, h=5, txt="SUPPLIER hereby confirm acceptance of this Order", 
+            #                   align="L")
+            #         self.cell(w=100, h=5, txt="MOTIONWELL Automation Pte. Ltd.",
+            #                   ln=True, align="L")
                     
-                    self.cell(w=100, h=5, txt="Name, Designation, Signature and Date", 
-                              align="L")
-                    self.cell(w=100, h=5, txt="Authorized Signature and Date",
-                              ln=True, align="L")
+            #         self.cell(w=100, h=5, txt="Name, Designation, Signature and Date", 
+            #                   align="L")
+            #         self.cell(w=100, h=5, txt="Authorized Signature and Date",
+            #                   ln=True, align="L")
         
-            PurOrderGen = PurOrder("P", "mm", "A4")
-            PurOrderGen.set_auto_page_break(auto=True, margin=15)
-            PurOrderGen.add_page()
+            # PurOrderGen = PurOrder("P", "mm", "A4")
+            # PurOrderGen.set_auto_page_break(auto=True, margin=15)
+            # PurOrderGen.add_page()
             
-            PurOrderGen.companyDetail()
-            PurOrderGen.printHeading(unitDataLst)
-            PurOrderGen.printContent(unitDataLst)
+            # PurOrderGen.companyDetail()
+            # PurOrderGen.printHeading(unitDataLst)
+            # PurOrderGen.printContent(unitDataLst)
             
-            if PurOrderGen.get_y() >= 268:
-                PurOrderGen.add_page()
+            # if PurOrderGen.get_y() >= 268:
+            #     PurOrderGen.add_page()
             
-            PurOrderGen.printTotal(unitDataLst)
-            PurOrderGen.ln(20)
+            # PurOrderGen.printTotal(unitDataLst)
+            # PurOrderGen.ln(20)
             
-            if PurOrderGen.get_y() >= 218:
-                PurOrderGen.add_page()
+            # if PurOrderGen.get_y() >= 218:
+            #     PurOrderGen.add_page()
             
-            PurOrderGen.printNotes()
+            # PurOrderGen.printNotes()
             
-            PurOrderGen.output(f"{PurOrderNumRef}.pdf")
+            # PurOrderGen.output(f"{PurOrderNumRef}.pdf")
             
-            messagebox.showinfo("Create Successful", 
-                                f"You Have Generated PO {PurOrderNumRef}", parent=framePur) 
+            # messagebox.showinfo("Create Successful", 
+            #                     f"You Have Generated PO {PurOrderNumRef}", parent=framePur) 
         
         
         
@@ -1757,70 +1836,75 @@ def openPurchase():
         ButtonRepFrame.grid(row=2, column=0, padx=(50,10), pady=5, ipadx=10, ipady=5, sticky=W)
         
         DataRepFrame = LabelFrame(framePur, text="Data")
-        DataRepFrame.grid(row=2, column=1, padx=(10,75), pady=(5,0), ipadx=10, ipady=5, sticky=W)
+        DataRepFrame.grid(row=3, column=0, padx=(50,10), pady=(0,5), ipadx=10, ipady=5, sticky=W)
         
-        TaxCurrencyFrame = LabelFrame(framePur, text="Tax & Currency")
-        TaxCurrencyFrame.grid(row=3, column=1, padx=(10,75), pady=(0,5), ipadx=10, ipady=5, sticky=W)
+        # TaxCurrencyFrame = LabelFrame(framePur, text="Tax & Currency")
+        # TaxCurrencyFrame.grid(row=3, column=1, padx=(10,75), pady=(0,5), ipadx=10, ipady=5, sticky=W)
         
-        buttonSelectThis = Button(ButtonRepFrame, text="Select Unit (Top)", command=selectUnit)
+        buttonSelectThis = Button(ButtonRepFrame, text="Select Unit (Top)", command=selectUnitPur)
         buttonSelectThis.grid(row=0, column=0, padx=10, pady=5, sticky=W)
         
-        buttonDeleteThis = Button(ButtonRepFrame, text="Delete Unit (Below)", command=deleteUnit)
+        buttonDeleteThis = Button(ButtonRepFrame, text="Delete Unit (Below)", command=deleteUnitPur)
         buttonDeleteThis.grid(row=0, column=1, padx=10, pady=5, sticky=W)
         
-        buttonGenPur = Button(ButtonRepFrame, text="Generate Purchase Order", command=genPurOrder)
-        buttonGenPur.grid(row=0, column=2, padx=10, pady=5, sticky=W)
+        # buttonGenPur = Button(ButtonRepFrame, text="Generate Purchase Order", command=genPurOrder)
+        # buttonGenPur.grid(row=0, column=2, padx=10, pady=5, sticky=W)
     
         buttonExportXero = Button(ButtonRepFrame, text="Export to Xero", command=ExportToXero)
-        buttonExportXero.grid(row=0, column=3, padx=10, pady=5, sticky=W)
+        buttonExportXero.grid(row=0, column=2, padx=10, pady=5, sticky=W)
     
         buttonClosePur = Button(ButtonRepFrame, text="Close Tab", command=closeTabPur)
-        buttonClosePur.grid(row=0, column=4, padx=10, pady=5, sticky=W)
+        buttonClosePur.grid(row=0, column=3, padx=10, pady=5, sticky=W)
         
         
-        ReqQtyLabel = Label(DataRepFrame, width=8, text="Req Qty.")
+        ReqQtyLabel = Label(DataRepFrame, text="Req Qty.")
         ReqQtyBox = Entry(DataRepFrame, width=8)
-        UnitCostSelectLabel = Label(DataRepFrame, width=12, text="Unit Cost")
-        UnitCostSelectBox = Entry(DataRepFrame, width=12)
+        UnitCostSelectLabel = Label(DataRepFrame, text="Unit Cost")
+        UnitCostSelectBox = Entry(DataRepFrame, width=8)
         
+       
+        
+        TaxLabel = Label(DataRepFrame, text="Tax")
+        TaxBox = Spinbox(DataRepFrame, from_=0, to=100, width=5)
+        TaxPercentageLabel = Label(DataRepFrame, text="%")
+        
+        CurrencyLabel = Label(DataRepFrame, text="Currency")
+        CurrencyBox = ttk.Combobox(DataRepFrame,
+                                   value=CountryRef.getCcyLst(), 
+                                   width=8, state="readonly")
+
         buttonClearData = Button(DataRepFrame, text="Clear", width=8, command=clearUnitData)
         buttonUpdateData = Button(DataRepFrame, text="Update", width=8, command=updateUnitData)
-        
-        TaxLabel = Label(TaxCurrencyFrame, width=8, text="Tax")
-        TaxBox = Entry(TaxCurrencyFrame, width=8)
-        CurrencyLabel = Label(TaxCurrencyFrame, width=12, text="Currency")
-        CurrencyBox = ttk.Combobox(TaxCurrencyFrame, width=10, 
-                                   value=["SGD", "USD", "CNY", "HKD", "EUR",
-                                          "JPY", "GBP", "AUD", "CAD", "CHF",
-                                          "Others"], state="readonly")
 
-        buttonDefaultCommon = Button(TaxCurrencyFrame, text="Default", width=8, command=defaultCommon)
-        buttonUpdateCommon = Button(TaxCurrencyFrame, text="Update", width=8, command=updateCommon)
+        # buttonDefaultCommon = Button(DataRepFrame, text="Default", width=8, command=defaultCommon)
+        # buttonUpdateCommon = Button(DataRepFrame, text="Update", width=8, command=updateCommon)
         
-        def CurrencySelect(e):
-            if CurrencyBox.get() == "Others":
-                CurrencyBox.config(state="normal")
-                CurrencyBox.delete(0, END)
-            else:
-                CurrencyBox.config(state="readonly")
+        # def CurrencySelect(e):
+        #     if CurrencyBox.get() == "Others":
+        #         CurrencyBox.config(state="normal")
+        #         CurrencyBox.delete(0, END)
+        #     else:
+        #         CurrencyBox.config(state="readonly")
         
-        ReqQtyLabel.grid(row=0, column=0, padx=10, pady=5, sticky=E)
-        ReqQtyBox.grid(row=0, column=1, padx=10, pady=5, sticky=W)        
-        UnitCostSelectLabel.grid(row=0, column=2, padx=(10,10), pady=5, sticky=E)
-        UnitCostSelectBox.grid(row=0, column=3, padx=10, pady=5, sticky=W)
-        
-        buttonClearData.grid(row=0, column=4, padx=(20,5), pady=5, sticky=W)
-        buttonUpdateData.grid(row=0, column=5, padx=(5,10), pady=5, sticky=W)
+        ReqQtyLabel.grid(row=0, column=0, padx=5, pady=5, sticky=E)
+        ReqQtyBox.grid(row=0, column=1, padx=5, pady=5, sticky=W)        
+        UnitCostSelectLabel.grid(row=0, column=2, padx=5, pady=5, sticky=E)
+        UnitCostSelectBox.grid(row=0, column=3, padx=5, pady=5, sticky=W)
 
-        TaxLabel.grid(row=1, column=0, padx=10, pady=5, sticky=E)
-        TaxBox.grid(row=1, column=1, padx=10, pady=5, sticky=E)
-        CurrencyLabel.grid(row=1, column=2, padx=(10,10), pady=5, sticky=E)
-        CurrencyBox.grid(row=1, column=3, padx=10, pady=5, sticky=E)
+        TaxLabel.grid(row=0, column=4, padx=5, pady=5, sticky=E)
+        TaxBox.grid(row=0, column=5, padx=5, pady=5, sticky=E)
+        TaxPercentageLabel.grid(row=0, column=6, padx=(0,5), pady=5, sticky=W)
         
-        buttonDefaultCommon.grid(row=1, column=4, padx=(20,5), pady=5, sticky=W)
-        buttonUpdateCommon.grid(row=1, column=5, padx=(5,10), pady=5, sticky=W)
+        CurrencyLabel.grid(row=0, column=7, padx=5, pady=5, sticky=E)
+        CurrencyBox.grid(row=0, column=8, padx=5, pady=5, sticky=E)
+        
+        buttonClearData.grid(row=0, column=9, padx=(20,5), pady=5, sticky=W)
+        buttonUpdateData.grid(row=0, column=10, padx=5, pady=5, sticky=W)
+        
+        # buttonDefaultCommon.grid(row=1, column=4, padx=(20,5), pady=5, sticky=W)
+        # buttonUpdateCommon.grid(row=1, column=5, padx=(5,10), pady=5, sticky=W)
 
-        CurrencyBox.bind("<<ComboboxSelected>>", CurrencySelect)
+        # CurrencyBox.bind("<<ComboboxSelected>>", CurrencySelect)
 
 
 
@@ -1866,6 +1950,9 @@ def openPurchase():
         queryTreeSelect()
 
         SelectTreeView.bind('<Double-Button-1>', selectUnitData)
+        SelectTreeView.bind('<Button-3>', deselectUnitData)
+        ValTreeView.bind('<Button-3>', deselectUnitValue)
+        
         SelectTreeView.bind('<Return>', updateUnitDataClick)
         # DataRepFrame.bind('<Return>', updateUnitData)
         
