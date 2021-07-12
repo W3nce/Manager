@@ -27,7 +27,7 @@ import os
 
 
 logininfo = (ConnConfig.host,ConnConfig.username,ConnConfig.password)
-RetrieveToken()
+#RetrieveToken()
 
 def openPurchase():
     RepWin = Toplevel()
@@ -178,6 +178,39 @@ def openPurchase():
     OrderTreeView.heading("OrderDate", text = "Order Date")
     OrderTreeView.heading("VendorRemark", text = "Vendor Remark")
     OrderTreeView.heading("DateEntry", text = "Date of Entry")
+
+
+
+
+
+    def deselectOrderClick(e):
+        deselectOrder()
+    
+    def selectOrderClick(e):
+        selectOrder()
+    
+    def updateOrderReturn(e):
+        if buttonUpdateOrder["state"] == "disabled":
+            messagebox.showwarning("Unable to Update", 
+                                   "Please Select an Order", parent=frameRep) 
+        else:
+            updateOrder()
+    
+    def deleteOrderDel(e):
+        if buttonDeleteOrder["state"] == "disabled":
+            messagebox.showwarning("Unable to Delete", 
+                                   "Please Select an Order", parent=frameRep) 
+        else:
+            deleteOrder()
+
+    OrderTreeView.bind("<Button-3>", deselectOrderClick)
+    OrderTreeView.bind("<Double-Button-1>", selectOrderClick)
+    OrderTreeView.bind("<Return>", updateOrderReturn)
+    OrderTreeView.bind("<Delete>", deleteOrderDel) 
+
+
+
+
 
     def genOrderNum():
         curPur = connPur.cursor()
@@ -395,7 +428,7 @@ def openPurchase():
     def orderCalPro():
         calWin = Toplevel()
         calWin.title("Select the Date")
-        calWin.geometry("240x240")
+        calWin.geometry("280x260")
         
         cal = Calendar(calWin, selectmode="day", date_pattern="y-mm-dd")
         cal.grid(row=0, column=0, columnspan=3, padx=10, pady=10, sticky=EW)
@@ -727,6 +760,7 @@ def openPurchase():
             buttonUpdatePur.config(state=NORMAL)
             buttonCreatePur.config(state=DISABLED)
             buttonDeletePur.config(state=NORMAL)
+            OrderTreeView.config(selectmode="none")
             
         except:
             clearEntryOrder()
@@ -826,30 +860,42 @@ def openPurchase():
             messagebox.showerror("Unable to Load",
                                  "Please Select an Order",
                                  parent=frameRep)
+        
         else:
-            loadOrderCom()
+            if selected[0][0] == "Y":
+                messagebox.showwarning("Unable to Load", "You Have Selected a Year",
+                                        parent=frameRep)
+            elif selected[0][0] == "M":
+                messagebox.showwarning("Unable to Load", "You Have Selected a Month",
+                                        parent=frameRep)
+            else:
+                loadOrderCom()
     
     def loadOrderCom():
-        buttonLoadPur.config(state=DISABLED)
-        
-        curPur = connPur.cursor()
-        selected = OrderTreeView.selection()[0]
-        sqlSelect = "SELECT * FROM PUR_ORDER_LIST WHERE oid = %s"
-        valSelect = (selected, )
-
-        curPur.execute(sqlSelect, valSelect)
-        purSelect = curPur.fetchall()
-        
-        connPur.commit()
-        curPur.close() 
-
-        PurOrderNumRef = purSelect[0][1]
-        VendorRef = purSelect[0][4]
-        
-        framePur = Frame(tabNoteRep)
-        tabNoteRep.add(framePur, text="Select Unit for Purchase Order")
-        framePur.columnconfigure(0, weight=1)
-        tabNoteRep.select(1)
+        try:
+            buttonLoadPur.config(state=DISABLED)
+            
+            curPur = connPur.cursor()
+            selected = OrderTreeView.selection()[0]
+            sqlSelect = "SELECT * FROM PUR_ORDER_LIST WHERE oid = %s"
+            valSelect = (selected, )
+    
+            curPur.execute(sqlSelect, valSelect)
+            purSelect = curPur.fetchall()
+            
+            connPur.commit()
+            curPur.close() 
+    
+            PurOrderNumRef = purSelect[0][1]
+            VendorRef = purSelect[0][4]
+            
+            framePur = Frame(tabNoteRep)
+            tabNoteRep.add(framePur, text="Select Unit for Purchase Order")
+            framePur.columnconfigure(0, weight=1)
+            tabNoteRep.select(1)
+        except:
+            messagebox.showerror("Unable to Load", "Please Check Again",
+                                 parent=frameRep)
 
 
 
@@ -1010,16 +1056,15 @@ def openPurchase():
         # ValTreeView.grid(row=2, column=0, columnspan=10, padx=10)
         ValTreeView.pack(padx=5, pady=5, ipadx=5, ipady=5, fill="x", expand=True)
         
-        ValTreeView["columns"] = ("Part", "Description", "D", "S", "CLS", "V", 
+        ValTreeView["columns"] = ("Part", "Description", "D", "CLS", "V", 
                                     "Maker", "Spec", "DES", "SPA", "OH", "REQ", 
                                     "PCH", "BAL", "RCV", "ADJ", "Vendor", "UnitCost")
         
         # ValTreeView.column("#0", anchor=CENTER, width=50)
         ValTreeView.column("#0", width=0 ,stretch=NO)
         ValTreeView.column("Part", anchor=CENTER, width=45)
-        ValTreeView.column("Description", anchor=CENTER, width=180)
+        ValTreeView.column("Description", anchor=CENTER, width=200)
         ValTreeView.column("D", anchor=CENTER, width=30)
-        ValTreeView.column("S", anchor=CENTER, width=30)
         ValTreeView.column("CLS", anchor=CENTER, width=60)
         ValTreeView.column("V", anchor=CENTER, width=30)
         ValTreeView.column("Maker", anchor=CENTER, width=100)
@@ -1033,13 +1078,12 @@ def openPurchase():
         ValTreeView.column("RCV", anchor=CENTER, width=40)
         ValTreeView.column("ADJ", anchor=CENTER, width=40)
         ValTreeView.column("Vendor", anchor=CENTER, width=100)
-        ValTreeView.column("UnitCost", anchor=CENTER, width=80)
+        ValTreeView.column("UnitCost", anchor=CENTER, width=90)
     
-        ValTreeView.heading("#0", text="Index", anchor=W)
+        ValTreeView.heading("#0", text="Index", anchor=CENTER)
         ValTreeView.heading("Part", text="Part", anchor=CENTER)
         ValTreeView.heading("Description", text="Description", anchor=CENTER)
         ValTreeView.heading("D", text="D", anchor=CENTER)
-        ValTreeView.heading("S", text="S", anchor=CENTER)
         ValTreeView.heading("CLS", text="CLS", anchor=CENTER)
         ValTreeView.heading("V", text="V", anchor=CENTER)
         ValTreeView.heading("Maker", text="Maker", anchor=CENTER)
