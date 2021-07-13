@@ -3,7 +3,8 @@
 from tkinter import *
 # from ttkwidgets import CheckboxTreeview
 from tkinter import ttk
-from xerogui.config import OverWrite,CLIENT_ID,CLIENT_SECRET,XERO_EMAIL,CHROME_DRIVER_LOCATION
+#from xerogui.config import OverWrite,CLIENT_ID,CLIENT_SECRET,XERO_EMAIL,CHROME_DRIVER_LOCATION
+from xerogui.config import OverWrite,CLIENT_ID,CLIENT_SECRET,XERO_EMAIL,CHROME_DRIVER_LOCATION,XeroConfigKey
 import pprint as pp
 
 
@@ -24,6 +25,8 @@ from selenium.webdriver.chrome.options import Options
 
 import time
 
+
+
 def callback_threaded(target):
     Thread(target=target).start()
 
@@ -31,6 +34,7 @@ LoginURL = 'https://login.xero.com/identity/connect/authorize?response_type=code
 
 #https://login.xero.com/identity/connect/authorize/callback?client_id=xero_business_xeroweb_hybrid-web&redirect_uri=https%3A%2F%2Fgo.xero.com%2Fsignin-oidc&response_mode=form_post&response_type=code%20id_token&scope=xero_all-apis%20openid%20email%20profile&state=OpenIdConnect.AuthenticationProperties%3D1W88diWb5i9q8jFKqLqTq8JQw_N8bcgjb5kbZYNAPIXXosrquYCy7d7ci6UKm6usSKDMfq05wOhm04CyVsJfirpF5_QLcWMy2oLuiVd_ktA9GFfFYVEdGIA_HHhvw-B6Qk8_apIMBXXp1MwxP4HeJGjMaGP8UKt3cDy7DIdrF5aderu-QLMkTuC2iF4PYOxmSo6IUcPgmjpQ5-JOP8TQjaZY6kA&nonce=637601966675361249.OWUwNjIxYTQtZjRhOS00YzNhLWJlZGMtMmU1MDNiNGY2ZmQ4NTM2Y2M2OGQtZTE5YS00MGU5LWJlNjUtMTA3MWUyM2I2MTAz&x-client-SKU=ID_NET451&x-client-ver=1.3.14.0
 
+TEMP_XERO_EMAIL = None
 
 client_id =  CLIENT_ID
 client_secret = CLIENT_SECRET
@@ -104,8 +108,9 @@ def XeroFirstAuth():
         
     
         def Enter():
-            global xeroemail,xeropw
+            global xeroemail,xeropw,TEMP_XERO_EMAIL
             xeroemail = EnterEmailEntry.get()
+            TEMP_XERO_EMAIL = EnterEmailEntry.get()
             xeropw= EnterPWEntry.get()
             ReqPW.destroy()
             
@@ -245,6 +250,12 @@ def XeroFirstAuth():
     # 4. Receive your tokens
     if 'error' not in json_response.keys():
         global tkn
+        with open('ChromeConfig.txt', 'w+') as ChromeConfig:
+               
+                text = [f"{XeroConfigKey[0]} = <<{TEMP_XERO_EMAIL}>>", f"\n{XeroConfigKey[1]} = <<{CHROME_DRIVER_LOCATION}>>", f"\n{XeroConfigKey[2]} = <<1>>"]
+                print(text)
+                ChromeConfig.writelines(text) 
+                ChromeConfig.close()
         LOGIN = 1
         tkn =  [json_response['access_token'], json_response['refresh_token']]
         return tkn
@@ -322,6 +333,7 @@ def XeroRequestsBase(URL,method,json = None):
     else:
         
         tkn = XeroFirstAuth()
+        new_tokens = XeroRefreshToken(tkn[1])
         xero_tenant_id = XeroTenants(tkn[0])
         
     get_url = URL
@@ -337,19 +349,37 @@ def XeroRequestsBase(URL,method,json = None):
     json_response = response.json()
     print('\nREQUEST')
     return(json_response)
+  
+def XeroSuppliersGetAll():
+
+    ContactList = XeroRequestsBase('https://api.xero.com/api.xro/2.0/Contacts','GET')
+    print('\nGET ALL CONTACTS')
+    #print([Contact["IsSupplier"] for Contact in ContactList['Contacts']])
+    return {Contact['Name'] if Contact["IsSupplier"] == True else None: Contact['ContactID'] for Contact in ContactList['Contacts']}
+
     
 def XeroContactsGetAll():
 
     ContactList = XeroRequestsBase('https://api.xero.com/api.xro/2.0/Contacts','GET')
     print('\nGET ALL CONTACTS')
-    return {Contact['Name'] : Contact['ContactID']for Contact in ContactList['Contacts']}
+    #print([Contact["IsSupplier"] for Contact in ContactList['Contacts']])
+    return {Contact['Name'] : Contact['ContactID'] for Contact in ContactList['Contacts']}
+
+def XeroContactsGetAllInfo():
+
+    ContactList = XeroRequestsBase('https://api.xero.com/api.xro/2.0/Contacts','GET')
+    print('\nGET ALL CONTACTS')
+    return ContactList
+    #{Contact['Name'] : Contact['ContactID']for Contact in ContactList['Contacts']}
+
+
 
 
 def XeroContactsGet(ContactID):
     ContactList = XeroRequestsBase(f'https://api.xero.com/api.xro/2.0/Contacts/{ContactID}',
                                    'GET')
     print('\nGET ALL CONTACTS')
-    pp.pprint({Contact['Name'] : Contact['ContactID']for Contact in ContactList['Contacts']})
+    #pp.pprint({Contact['Name'] : Contact['ContactID']for Contact in ContactList['Contacts']})
     return {Contact['Name'] : Contact['ContactID']for Contact in ContactList['Contacts']}
 
 

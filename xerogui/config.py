@@ -1,7 +1,7 @@
 import os
 from tkinter import *
 
-ConfigKey = ['XERO_EMAIL','CHROME_DRIVER_LOCATION','CONFIGURED']
+XeroConfigKey = ['XERO_EMAIL','CHROME_DRIVER_LOCATION','CONFIGURED']
 XERO_EMAIL=None
 CHROME_DRIVER_LOCATION=None
 CONFIGURED = 0
@@ -76,25 +76,25 @@ def OverWrite(Reconfigure = False):
                 text = ChromeConfig.readlines()
                 for line in text:
                     
-                    if ConfigKey[0] in line:
+                    if XeroConfigKey[0] in line:
                         start = line.find('<<') + len('<<')
                         end = line.find('>>')
                         XERO_EMAIL = line[start:end]
                         continue
-                    if ConfigKey[1] in line:
+                    if XeroConfigKey[1] in line:
                         start = line.find('<<') + len('<<')
                         end = line.find('>>')
                         CHROME_DRIVER_LOCATION = line[start:end]
                         continue
                     
-                    if ConfigKey[2] in line:
+                    if XeroConfigKey[2] in line:
                         start = line.find('<<') + len('<<')
                         end = line.find('>>')
                         CONFIGURED = line[start:end]
                         
                         if int(line[start:end]) == 0 or Reconfigure:
                             XERO_EMAIL,CHROME_DRIVER_LOCATION,CONFIGURED = ConfigureChrome(email = XERO_EMAIL,driver = os.path.abspath("chromedriverv91.exe") if any([CHROME_DRIVER_LOCATION == 'None', CHROME_DRIVER_LOCATION == None]) else CHROME_DRIVER_LOCATION)
-                            text = [f"{ConfigKey[0]} = <<{XERO_EMAIL}>>", f"\n{ConfigKey[1]} = <<{CHROME_DRIVER_LOCATION}>>", f"\n{ConfigKey[2]} = <<{CONFIGURED}>>"]
+                            text = [f"{XeroConfigKey[0]} = <<{XERO_EMAIL}>>", f"\n{XeroConfigKey[1]} = <<{CHROME_DRIVER_LOCATION}>>", f"\n{XeroConfigKey[2]} = <<{CONFIGURED}>>"]
                             
                             ChromeConfig.seek(0)
                             ChromeConfig.writelines(text)
@@ -102,13 +102,13 @@ def OverWrite(Reconfigure = False):
                         else:
                             break
                 ChromeConfig.close()
-                print(f"{ConfigKey[0]} = <<{XERO_EMAIL}>>",f"\n{ConfigKey[1]} = <<{CHROME_DRIVER_LOCATION}>>",f"\n{ConfigKey[2]} = <<{CONFIGURED}>>")
+                print(f"{XeroConfigKey[0]} = <<{XERO_EMAIL}>>",f"\n{XeroConfigKey[1]} = <<{CHROME_DRIVER_LOCATION}>>",f"\n{XeroConfigKey[2]} = <<{CONFIGURED}>>")
                 
         else:
             with open('ChromeConfig.txt', 'w+') as ChromeConfig:
                 XERO_EMAIL,CHROME_DRIVER_LOCATION,CONFIGURED = ConfigureChrome(email = XERO_EMAIL, driver = os.path.abspath("chromedriverv91.exe") if any([CHROME_DRIVER_LOCATION == 'None', CHROME_DRIVER_LOCATION == None])  else CHROME_DRIVER_LOCATION)
                 
-                text = [f"{ConfigKey[0]} = <<{XERO_EMAIL}>>", f"\n{ConfigKey[1]} = <<{CHROME_DRIVER_LOCATION}>>", f"\n{ConfigKey[2]} = <<{CONFIGURED}>>"]
+                text = [f"{XeroConfigKey[0]} = <<{XERO_EMAIL}>>", f"\n{XeroConfigKey[1]} = <<{CHROME_DRIVER_LOCATION}>>", f"\n{XeroConfigKey[2]} = <<{CONFIGURED}>>"]
                 print(text)
                 ChromeConfig.writelines(text) 
                 ChromeConfig.close()
