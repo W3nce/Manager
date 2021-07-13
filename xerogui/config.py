@@ -91,21 +91,28 @@ def OverWrite(Reconfigure = False):
                         start = line.find('<<') + len('<<')
                         end = line.find('>>')
                         CHROME_DRIVER_LOCATION = line[start:end]
+                        continue
                         
                     if XeroConfigKey[2] in line:
                         start = line.find('<<') + len('<<')
                         end = line.find('>>')
                         CLIENT_ID = line[start:end]
+                        continue
+                    
+                                        
+                    if XeroConfigKey[4] in line:
+                        start = line.find('<<') + len('<<')
+                        end = line.find('>>')
+                        CLIENT_SECRET2 = line[start:end]
+                        continue
                         
                     if XeroConfigKey[3] in line:
                         start = line.find('<<') + len('<<')
                         end = line.find('>>')
                         CLIENT_SECRET = line[start:end]
+                        continue
                         
-                    if XeroConfigKey[4] in line:
-                        start = line.find('<<') + len('<<')
-                        end = line.find('>>')
-                        CLIENT_SECRET2 = line[start:end]
+
                                         
                     if XeroConfigKey[5] in line:
                         start = line.find('<<') + len('<<')
