@@ -27,7 +27,7 @@ import os
 
 
 logininfo = (ConnConfig.host,ConnConfig.username,ConnConfig.password)
-#RetrieveToken()
+RetrieveToken()
 
 def openPurchase():
     RepWin = Toplevel()
@@ -1680,11 +1680,11 @@ def openPurchase():
             
             
         def ExportToXero():
-            print(__name__)
             
             tkn = RetrieveToken()
             
-            ContactDict = XeroContactsGetAll()
+            ContactDict = XeroSuppliersGetAll()
+            ContactDict.pop(None)
             
             ThemesDict = XeroThemesGetAll()
             
