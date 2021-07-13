@@ -1170,6 +1170,8 @@ def openPurchase():
         ValTreeView.heading("UnitCost", text="Unit Cost", anchor=CENTER)
         ValTreeView.heading("Currency", text="Currency", anchor=CENTER)
         
+
+        
         def formatUnitNum(num):
             threeDigit = str(num).rjust(3, "0")
             UnitFullName = f"{AssemblyFullName}-{threeDigit}"
@@ -1985,7 +1987,7 @@ def openPurchase():
        
         
         TaxLabel = Label(DataRepFrame, text="Tax")
-        TaxBox = Spinbox(DataRepFrame, from_=0, to=100, width=5)
+        TaxBox = Spinbox(DataRepFrame, from_=0, to=100, width=5, state="readonly")
         TaxPercentageLabel = Label(DataRepFrame, text="%")
         
         CurrencyLabel = Label(DataRepFrame, text="Currency")
@@ -2031,6 +2033,15 @@ def openPurchase():
         # CurrencyBox.bind("<<ComboboxSelected>>", CurrencySelect)
 
 
+
+        def TaxBoxClick(e):
+            TaxBox.config(state="normal")
+        
+        def TaxBoxNormal(e):
+            TaxBox.config(state="readonly")
+        
+        TaxBox.bind("<Double-Button-3>", TaxBoxClick)
+        TaxBox.bind("<Leave>", TaxBoxNormal)
 
 
     

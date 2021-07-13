@@ -8,6 +8,7 @@ from PIL import ImageTk, Image
 from mysql import *
 import mysql.connector
 import csv
+import re
 import ConnConfig
 import CountryRef
 from xerogui.config import OverWrite,CLIENT_ID,CLIENT_SECRET,XERO_EMAIL,CHROME_DRIVER_LOCATION
@@ -166,7 +167,7 @@ if Login.AUTH:
     ProjectTreeView.column("#0", anchor = CENTER, width =60, minwidth = 0)
     # ProjectTreeView.column("#0",  width=0, stretch=NO)
     ProjectTreeView.column("ProClassID", anchor = CENTER, width = 70, minwidth = 30)
-    ProjectTreeView.column("ProName", anchor = CENTER, width= 135, minwidth = 30)
+    ProjectTreeView.column("ProName", anchor = W, width= 135, minwidth = 30)
     ProjectTreeView.column("ProManager", anchor = W, width = 95, minwidth = 30)
     ProjectTreeView.column("ProSupport", anchor = W, width = 95, minwidth = 30)
     ProjectTreeView.column("StartDate", anchor = CENTER, width = 100, minwidth = 30)
@@ -921,8 +922,8 @@ if Login.AUTH:
         # MachTreeView.column("#0", anchor = CENTER, width=45, minwidth=0)
         MachTreeView.column("#0",  width=0, stretch=NO)
         MachTreeView.column("MachID",anchor = CENTER, width = 50, minwidth = 30)
-        MachTreeView.column("MachName",anchor = CENTER, width = 130, minwidth = 50)
-        MachTreeView.column("LeadDesigner",anchor = CENTER, width = 130, minwidth = 50)
+        MachTreeView.column("MachName",anchor = W, width = 130, minwidth = 50)
+        MachTreeView.column("LeadDesigner",anchor = W, width = 130, minwidth = 50)
         MachTreeView.column("OrderQty",anchor = CENTER, width = 80, minwidth = 50)
         MachTreeView.column("CompQty",anchor = CENTER, width = 80, minwidth = 50)
         MachTreeView.column("DesDue",anchor = CENTER, width = 90, minwidth = 50)
@@ -1691,12 +1692,12 @@ if Login.AUTH:
             # AssemTreeView.column("#0", anchor=CENTER, width=45)
             AssemTreeView.column("#0", width=0, stretch=NO)
             AssemTreeView.column("Num", anchor=CENTER, width=40)
-            AssemTreeView.column("Description", anchor=CENTER, width=80)
+            AssemTreeView.column("Description", anchor=W, width=80)
             AssemTreeView.column("Design", anchor=CENTER, width=75)
             AssemTreeView.column("Purchase", anchor=CENTER, width=75)
             AssemTreeView.column("Assembly", anchor=CENTER, width=75)
-            AssemTreeView.column("Designer", anchor=CENTER, width=90)
-            AssemTreeView.column("Locker", anchor=CENTER, width=90)
+            AssemTreeView.column("Designer", anchor=W, width=90)
+            AssemTreeView.column("Locker", anchor=W, width=90)
             AssemTreeView.column("Approved", anchor=CENTER, width=50)
             AssemTreeView.column("Num of Parts", anchor=CENTER, width=70)
             AssemTreeView.column("Parts Purchased", anchor=CENTER, width=80)
@@ -2712,12 +2713,12 @@ if Login.AUTH:
                 UnitTreeView.column("#0", width=0, stretch=NO)
                 # UnitTreeView.column("#0", width=50, anchor=W,stretch=NO)
                 UnitTreeView.column("Part", anchor=CENTER, width=45)
-                UnitTreeView.column("Description", anchor=CENTER, width=120)
+                UnitTreeView.column("Description", anchor=W, width=120)
                 UnitTreeView.column("D", anchor=CENTER, width=30)
                 UnitTreeView.column("CLS", anchor=CENTER, width=50)
                 UnitTreeView.column("V", anchor=CENTER, width=30)
-                UnitTreeView.column("Maker", anchor=CENTER, width=90)
-                UnitTreeView.column("Spec", anchor=CENTER, width=180)
+                UnitTreeView.column("Maker", anchor=W, width=90)
+                UnitTreeView.column("Spec", anchor=W, width=180)
                 UnitTreeView.column("DES", anchor=CENTER, width=35)
                 UnitTreeView.column("SPA", anchor=CENTER, width=35)
                 UnitTreeView.column("OH", anchor=CENTER, width=35)
@@ -2726,8 +2727,8 @@ if Login.AUTH:
                 UnitTreeView.column("BAL", anchor=CENTER, width=35)
                 UnitTreeView.column("RCV", anchor=CENTER, width=35)
                 UnitTreeView.column("OS", anchor=CENTER, width=35)
-                UnitTreeView.column("Remark", anchor=CENTER, width=100)
-                UnitTreeView.column("Vendor", anchor=CENTER, width=100)
+                UnitTreeView.column("Remark", anchor=W, width=100)
+                UnitTreeView.column("Vendor", anchor=W, width=100)
                 UnitTreeView.column("UnitCost", anchor=CENTER, width=80)
                 UnitTreeView.column("TotalCost", anchor=CENTER, width=80)
                 
@@ -3499,6 +3500,10 @@ if Login.AUTH:
                     DesQtyVal = int(desQty)
                     OrderQtyVal = int(orderQty)
                     
+                    def removeSymbol(cost):
+                        val = re.sub("[^0-9\.]", "", str(cost))
+                        return val
+                    
                     def sumTotalCost(unitCst, num):
                         if unitCst == None or unitCst == "":
                             return 0
@@ -3572,7 +3577,7 @@ if Login.AUTH:
                         if fullLst[i][17] == "":
                             UnitCost = None
                         else:
-                            UnitCost = float(fullLst[i][17])
+                            UnitCost = float(removeSymbol(fullLst[i][17]))
                         
                         if fullLst[i][18] == "":
                             TotalUnitCost = sumTotalCost(UnitCost, REQ)
