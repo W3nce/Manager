@@ -173,7 +173,7 @@ def openPurchase():
     OrderTreeView.column("PaymentTerm", anchor = CENTER, width= 150, minwidth = 50)
     OrderTreeView.column("OrderDate", anchor = CENTER, width = 150, minwidth = 50)
     OrderTreeView.column("VendorRemark", anchor = W, width = 400, minwidth = 50)
-    OrderTreeView.column("TransCcy", anchor = W, width = 70, minwidth = 50)
+    OrderTreeView.column("TransCcy", anchor = CENTER, width = 70, minwidth = 50)
     OrderTreeView.column("DateEntry", anchor = CENTER, width = 150, minwidth = 50)
     
     OrderTreeView.heading("#0", text = "Index")
@@ -195,14 +195,14 @@ def openPurchase():
         selectOrder()
     
     def updateOrderReturn(e):
-        if buttonUpdateOrder["state"] == "disabled":
+        if buttonUpdatePur["state"] == "disabled":
             messagebox.showwarning("Unable to Update", 
                                    "Please Select an Order", parent=frameRep) 
         else:
             updateOrder()
     
     def deleteOrderDel(e):
-        if buttonDeleteOrder["state"] == "disabled":
+        if buttonDeletePur["state"] == "disabled":
             messagebox.showwarning("Unable to Delete", 
                                    "Please Select an Order", parent=frameRep) 
         else:
@@ -506,7 +506,7 @@ def openPurchase():
                 addressFull = f"{vendorInfo[0][3]} ({vendorInfo[0][2]}) {vendorInfo[0][6]} {vendorInfo[0][5]} {vendorInfo[0][7]} {vendorInfo[0][4]}"
             OrderTreeView.insert(parent=f"M{rec[1][5:9]}", index=END, iid=rec[0], text="", 
                                   values=(rec[1], rec[2], rec[3], addressFull, rec[5],
-                                          rec[6], rec[7]))
+                                          rec[7]))
         curVend.close()
         
     def updateOrderCcy():
@@ -1132,12 +1132,12 @@ def openPurchase():
         # ValTreeView.column("#0", anchor=CENTER, width=50)
         ValTreeView.column("#0", width=0 ,stretch=NO)
         ValTreeView.column("Part", anchor=CENTER, width=45)
-        ValTreeView.column("Description", anchor=CENTER, width=160)
+        ValTreeView.column("Description", anchor=W, width=160)
         ValTreeView.column("D", anchor=CENTER, width=30)
         ValTreeView.column("CLS", anchor=CENTER, width=60)
         ValTreeView.column("V", anchor=CENTER, width=30)
         ValTreeView.column("Maker", anchor=CENTER, width=100)
-        ValTreeView.column("Spec", anchor=CENTER, width=180)
+        ValTreeView.column("Spec", anchor=W, width=180)
         ValTreeView.column("DES", anchor=CENTER, width=40)
         ValTreeView.column("SPA", anchor=CENTER, width=40)
         ValTreeView.column("OH", anchor=CENTER, width=40)
@@ -2054,9 +2054,9 @@ def openPurchase():
         # SelectTreeView.column("#0", anchor=CENTER, width=50)
         SelectTreeView.column("#0", width=0 ,stretch=NO)
         SelectTreeView.column("Part", anchor=CENTER, width=135)
-        SelectTreeView.column("Description", anchor=CENTER, width=220)
-        SelectTreeView.column("Maker", anchor=CENTER, width=120)
-        SelectTreeView.column("Spec", anchor=CENTER, width=220)
+        SelectTreeView.column("Description", anchor=W, width=200)
+        SelectTreeView.column("Maker", anchor=CENTER, width=140)
+        SelectTreeView.column("Spec", anchor=W, width=220)
         SelectTreeView.column("REQ", anchor=CENTER, width=60)
         SelectTreeView.column("Tax", anchor=CENTER, width=60)
         SelectTreeView.column("Vendor", anchor=CENTER, width=120)

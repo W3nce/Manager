@@ -202,7 +202,36 @@ if Login.AUTH:
     
     
     
+
+    def deselectProClick(e):
+        deselectPro()
     
+    def selectProClick(e):
+        selectPro()
+    
+    def updateProReturn(e):
+        if buttonUpdatePro["state"] == "disabled":
+            messagebox.showwarning("Unable to Update", 
+                                   "Please Select a Project", parent=framePro) 
+        else:
+            updatePro()
+    
+    def deleteProDel(e):
+        if buttonDeletePro["state"] == "disabled":
+            messagebox.showwarning("Unable to Delete", 
+                                   "Please Select a Project", parent=framePro) 
+        else:
+            deletePro()
+
+    ProjectTreeView.bind("<Button-3>", deselectProClick)
+    ProjectTreeView.bind("<Double-Button-1>", selectProClick)
+    ProjectTreeView.bind("<Return>", updateProReturn)
+    ProjectTreeView.bind("<Delete>", deleteProDel)  
+        
+        
+        
+        
+        
     def queryTreePro():
         curMain = connMain.cursor()
         curMain.execute("SELECT * FROM PROJECT_INFO")
@@ -502,33 +531,39 @@ if Login.AUTH:
             if selected[0] == "Y":
                 selectAll = ProjectTreeView.get_children(selected)
                 
-                for index in selectAll:
-                    sqlSelect = "SELECT * FROM PROJECT_INFO WHERE oid = %s"
-                    valSelect = (index, )
-    
-                    curMain.execute(sqlSelect, valSelect)
-                    
-                    recLst = curMain.fetchall()
-                    connMain.commit()
-                
-                    proID = recLst[0][1]
+                respDelAllPro = messagebox.askokcancel("Confirmation",
+                                                       "Delete ALL Project Under This Year?",
+                                                       parent=framePro)
+                if respDelAllPro == True:
+                    for index in selectAll:
+                        sqlSelect = "SELECT * FROM PROJECT_INFO WHERE oid = %s"
+                        valSelect = (index, )
+        
+                        curMain.execute(sqlSelect, valSelect)
                         
-                    sqlDelete = "DELETE FROM PROJECT_INFO WHERE oid = %s"
-                    valDelete = (index, )
-                    curMain.execute(sqlDelete, valDelete)
-                    connMain.commit()
+                        recLst = curMain.fetchall()
+                        connMain.commit()
                     
-                    curInit = connInit.cursor()
-                    curInit.execute(f"DROP DATABASE IF EXISTS `{proID}`")
-                    connInit.commit()
-                    curInit.close()
-                    
-                    clearEntryPro()
-                    ProjectTreeView.delete(*ProjectTreeView.get_children())
-                    queryTreePro()
-                    
-                messagebox.showinfo("Delete Successful", 
-                                    f"You Have Deleted {len(selectAll)} Projects", parent=framePro) 
+                        proID = recLst[0][1]
+                            
+                        sqlDelete = "DELETE FROM PROJECT_INFO WHERE oid = %s"
+                        valDelete = (index, )
+                        curMain.execute(sqlDelete, valDelete)
+                        connMain.commit()
+                        
+                        curInit = connInit.cursor()
+                        curInit.execute(f"DROP DATABASE IF EXISTS `{proID}`")
+                        connInit.commit()
+                        curInit.close()
+                        
+                        clearEntryPro()
+                        ProjectTreeView.delete(*ProjectTreeView.get_children())
+                        queryTreePro()
+                        
+                    messagebox.showinfo("Delete Successful", 
+                                        f"You Have Deleted {len(selectAll)} Projects", parent=framePro) 
+                else:
+                    pass
     
             else:
                 sqlSelect = "SELECT * FROM PROJECT_INFO WHERE oid = %s"
@@ -3555,7 +3590,7 @@ if Login.AUTH:
                             elif Currency in CountryRef.getCcyLst():
                                 ExRate = CountryRef.getExRate(Currency)
                             else:
-                                ExRate= 0.00
+                                ExRate = 0.00
                         else:
                             ExRate = float(fullLst[i][20])
                             
@@ -4197,7 +4232,7 @@ if Login.AUTH:
             buttonSelectAssem.grid(row=0, column=3, padx=10, pady=10)
             buttonDeselectAssem.grid(row=0, column=4, padx=10, pady=10)
             buttonLoadAssem.grid(row=0, column=5, padx=10, pady=10)
-            buttonClearEntryAssem.grid(row=0, column=6, padx=10, pady=10)
+            buttonClearEntryAssem.grid(row=0, column=6, padx=(90,10), pady=10)
             buttonRefreshAssem.grid(row=0, column=7, padx=10, pady=10)
             buttonCloseTabAssem.grid(row=0, column=8, padx=10, pady=10)
             
@@ -4326,7 +4361,7 @@ if Login.AUTH:
         buttonSelectMach.grid(row=0, column=3, padx=10, pady=10)
         buttonDeselectMach.grid(row=0, column=4, padx=10, pady=10)
         buttonLoadMach.grid(row=0, column=5, padx=10, pady=10)
-        buttonClearEntryMach.grid(row=0, column=6, padx=10, pady=10)
+        buttonClearEntryMach.grid(row=0, column=6, padx=(90,10), pady=10)
         buttonRefreshMach.grid(row=0, column=7, padx=10, pady=10)
         buttonCloseTabMach.grid(row=0, column=8, padx=10, pady=10)
     
