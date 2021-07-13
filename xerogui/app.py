@@ -4,7 +4,7 @@ from tkinter import *
 # from ttkwidgets import CheckboxTreeview
 from tkinter import ttk
 #from xerogui.config import OverWrite,CLIENT_ID,CLIENT_SECRET,XERO_EMAIL,CHROME_DRIVER_LOCATION
-from xerogui.config import CLIENT_ID,CLIENT_SECRET,XERO_EMAIL,CHROME_DRIVER_LOCATION,XeroConfigKey
+from xerogui.config import CLIENT_ID,CLIENT_SECRET,CLIENT_SECRET2,XERO_EMAIL,CHROME_DRIVER_LOCATION,XeroConfigKey
 import pprint as pp
 
 
@@ -90,7 +90,7 @@ def XeroFirstAuth():
         EnterEmailLabel = Label(LoginFrame, text = 'Xero Email :').grid(row = 0, column = 0,padx=5, pady=5,sticky = E)
         EnterEmailEntry = Entry(LoginFrame, width=24)
         EnterEmailEntry.grid(row=0, column=1, padx=5, pady=10,sticky = W)
-        EnterEmailEntry.insert(END, XERO_EMAIL)
+        EnterEmailEntry.insert(END, '' if XERO_EMAIL == 'None' else XERO_EMAIL)
         
         EnterPWLabel = Label(LoginFrame, text = 'Xero Password :').grid(row = 1, column = 0,padx=5, pady=5,sticky = E)
         EnterPWEntry = Entry(LoginFrame, show="*", width = 24)
@@ -245,8 +245,13 @@ def XeroFirstAuth():
         global tkn
         with open('ChromeConfig.txt', 'w+') as ChromeConfig:
                
-                text = [f"{XeroConfigKey[0]} = <<{TEMP_XERO_EMAIL}>>", f"\n{XeroConfigKey[1]} = <<{CHROME_DRIVER_LOCATION}>>", f"\n{XeroConfigKey[2]} = <<1>>"]
-                print(text)
+                text = [f"{XeroConfigKey[0]} = <<{TEMP_XERO_EMAIL}>>", 
+                        f"\n{XeroConfigKey[1]} = <<{CHROME_DRIVER_LOCATION}>>", 
+                        f"\n{XeroConfigKey[2]} = <<{CLIENT_ID}>>", 
+                        f"\n{XeroConfigKey[3]} = <<{CLIENT_SECRET}>>", 
+                        f"\n{XeroConfigKey[4]} = <<{CLIENT_SECRET2}>>",
+                        f"\n{XeroConfigKey[5]} = <<1>>"]
+                
                 ChromeConfig.writelines(text) 
                 ChromeConfig.close()
         LOGIN = 1
