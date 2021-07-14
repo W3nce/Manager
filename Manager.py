@@ -417,7 +417,7 @@ if Login.AUTH:
             WHERE `oid` = %s"""
             
             ProID = ProIDBox.get()
-            ProName = ProNameBox.get()
+            ProName = ProNameBox.get().upper()
             Stat = ProStatusBox.current()
             
             def checkDatePro(dateVar):
@@ -469,7 +469,7 @@ if Login.AUTH:
             else:
                 return dateVar.get()
         
-        values = (ProIDBox.get(), ProNameBox.get(), EmpNameToOid(ProManagerBox.get()), 
+        values = (ProIDBox.get(), ProNameBox.get().upper(), EmpNameToOid(ProManagerBox.get()), 
                   EmpNameToOid(ProSupportBox.get()), checkDatePro(ProStartDateBox), 
                   checkDatePro(ProDeliveryDateBox), ProBasePlanLockVal.get(), 
                   ProLockVal.get(), ProStatusBox.current(), formatDate)
@@ -803,7 +803,7 @@ if Login.AUTH:
     def startCalPro():
         calWin = Toplevel()
         calWin.title("Select the Date")
-        calWin.geometry("240x240")
+        calWin.geometry("270x260")
         
         cal = Calendar(calWin, selectmode="day", date_pattern="y-mm-dd")
         cal.grid(row=0, column=0, columnspan=3, padx=10, pady=10, sticky=EW)
@@ -834,7 +834,7 @@ if Login.AUTH:
     def deCalPro():
         calWin = Toplevel()
         calWin.title("Select the Date")
-        calWin.geometry("240x240")
+        calWin.geometry("270x260")
         
         cal = Calendar(calWin, selectmode="day", date_pattern="y-mm-dd")
         cal.grid(row=0, column=0, columnspan=3, padx=10, pady=10, sticky=EW)
@@ -1124,7 +1124,7 @@ if Login.AUTH:
         def dueCalMach():
             calWin = Toplevel()
             calWin.title("Select the Date")
-            calWin.geometry("240x240")
+            calWin.geometry("270x260")
             
             cal = Calendar(calWin, selectmode="day", date_pattern="y-mm-dd")
             cal.grid(row=0, column=0, columnspan=3, padx=10, pady=10, sticky=EW)
@@ -1155,7 +1155,7 @@ if Login.AUTH:
         def compCalMach():
             calWin = Toplevel()
             calWin.title("Select the Date")
-            calWin.geometry("240x240")
+            calWin.geometry("270x260")
             
             cal = Calendar(calWin, selectmode="day", date_pattern="y-mm-dd")
             cal.grid(row=0, column=0, columnspan=3, padx=10, pady=10, sticky=EW)
@@ -1319,7 +1319,7 @@ if Login.AUTH:
             
             WHERE `oid` = %s"""
             
-            MachName = MachNameBox.get()
+            MachName = MachNameBox.get().upper()
             MachLeadDes = EmpNameToOid(MachDesignerBox.get())
             MachLeadLock = EmpNameToOid(MachLockerBox.get())
             MachOrderQty = MachOrderBox.get()
@@ -1371,7 +1371,7 @@ if Login.AUTH:
                 else:
                     return dateVar.get()
             
-            valueMach = (MachIDBox.get(), MachNameBox.get(), 
+            valueMach = (MachIDBox.get(), MachNameBox.get().upper(), 
                          EmpNameToOid(MachDesignerBox.get()), 
                          EmpNameToOid(MachLockerBox.get()), 
                          MachOrderBox.get(),
@@ -1934,7 +1934,7 @@ if Login.AUTH:
             def DesDueAssem():
                 calWin = Toplevel()
                 calWin.title("Select the Date")
-                calWin.geometry("240x240")
+                calWin.geometry("270x260")
                 
                 cal = Calendar(calWin, selectmode="day", date_pattern="y-mm-dd")
                 cal.grid(row=0, column=0, columnspan=3, padx=10, pady=10, sticky=EW)
@@ -1965,7 +1965,7 @@ if Login.AUTH:
             def POIDueAssem():
                 calWin = Toplevel()
                 calWin.title("Select the Date")
-                calWin.geometry("240x240")
+                calWin.geometry("270x260")
                 
                 cal = Calendar(calWin, selectmode="day", date_pattern="y-mm-dd")
                 cal.grid(row=0, column=0, columnspan=3, padx=10, pady=10, sticky=EW)
@@ -1996,7 +1996,7 @@ if Login.AUTH:
             def PartDueAssem():
                 calWin = Toplevel()
                 calWin.title("Select the Date")
-                calWin.geometry("240x240")
+                calWin.geometry("270x260")
                 
                 cal = Calendar(calWin, selectmode="day", date_pattern="y-mm-dd")
                 cal.grid(row=0, column=0, columnspan=3, padx=10, pady=10, sticky=EW)
@@ -2027,7 +2027,7 @@ if Login.AUTH:
             def DesCompAssem():
                 calWin = Toplevel()
                 calWin.title("Select the Date")
-                calWin.geometry("240x240")
+                calWin.geometry("270x260")
                 
                 cal = Calendar(calWin, selectmode="day", date_pattern="y-mm-dd")
                 cal.grid(row=0, column=0, columnspan=3, padx=10, pady=10, sticky=EW)
@@ -2058,7 +2058,7 @@ if Login.AUTH:
             def POICompAssem():
                 calWin = Toplevel()
                 calWin.title("Select the Date")
-                calWin.geometry("240x240")
+                calWin.geometry("270x260")
                 
                 cal = Calendar(calWin, selectmode="day", date_pattern="y-mm-dd")
                 cal.grid(row=0, column=0, columnspan=3, padx=10, pady=10, sticky=EW)
@@ -2089,7 +2089,7 @@ if Login.AUTH:
             def PartCompAssem():
                 calWin = Toplevel()
                 calWin.title("Select the Date")
-                calWin.geometry("240x240")
+                calWin.geometry("270x260")
                 
                 cal = Calendar(calWin, selectmode="day", date_pattern="y-mm-dd")
                 cal.grid(row=0, column=0, columnspan=3, padx=10, pady=10, sticky=EW)
@@ -2245,7 +2245,7 @@ if Login.AUTH:
                     else:
                         return dateVar.get()
                 
-                AssemName = DescBox.get()
+                AssemName = DescBox.get().upper()
                 DesStat = DesignBox.current()
                 PurStat = PurchaseBox.current()
                 AssemStat = AssemBox.current()
@@ -2308,7 +2308,7 @@ if Login.AUTH:
                 
                 assemFullName = f"{TypeLst[TypeBox.current()]}{NumBox.get()}"
                 
-                valueAssem = (TypeLst[TypeBox.current()], NumBox.get(), assemFullName, DescBox.get(),
+                valueAssem = (TypeLst[TypeBox.current()], NumBox.get(), assemFullName, DescBox.get().upper(),
                               DesignBox.current(), PurchaseBox.current(), AssemBox.current(),
                               EmpNameToOid(DesignerBox.get()), EmpNameToOid(LockerBox.get()),
                               checkDateAssem(DesignDueBox), checkDateAssem(DesignCompletedBox), 
@@ -3038,12 +3038,12 @@ if Login.AUTH:
                     DLst = ["", "D"]
     
                     PartNum = str(PartNumBox.get()).rjust(3,"0")
-                    Description = DescriptionBox.get()
+                    Description = DescriptionBox.get().upper()
                     D = DLst[DBox.current()]
                     CLS = CLSBox.get()
                     V = VBox.get()
                     Maker = MakerBox.get()
-                    Spec = SpecBox.get()
+                    Spec = SpecBox.get().upper()
                     DES = int(DESBox.get())
                     SPA = int(SPABox.get())
                     OH = int(OHBox.get())
@@ -3133,12 +3133,12 @@ if Login.AUTH:
                             DLst = ["", "D"]
                             
                             PartNum = str(PartNumBox.get()).rjust(3,"0")
-                            Description = DescriptionBox.get()
+                            Description = DescriptionBox.get().upper()
                             D = DLst[DBox.current()]
                             CLS = CLSBox.get()
                             V = VBox.get()
                             Maker = MakerBox.get()
-                            Spec = SpecBox.get()
+                            Spec = SpecBox.get().upper()
     
                             DES = int(DESBox.get())
                             SPA = int(SPABox.get())
@@ -3489,7 +3489,7 @@ if Login.AUTH:
                                 if rawLst[0][j] == "PART NO":
                                     singleLst[0] = checkPartNum(rawLst[i][j])
                                 elif rawLst[0][j] == "DESCRIPTION":
-                                    singleLst[1] = rawLst[i][j]
+                                    singleLst[1] = rawLst[i][j].upper()
                                 elif rawLst[0][j] == "D":
                                     singleLst[2] = rawLst[i][j]                    
                                 elif rawLst[0][j] == "CLASS":
@@ -3499,7 +3499,7 @@ if Login.AUTH:
                                 elif rawLst[0][j] == "MAKER":
                                     singleLst[5] = rawLst[i][j]
                                 elif rawLst[0][j] == "MAKER SPEC":
-                                    singleLst[6] = rawLst[i][j]
+                                    singleLst[6] = rawLst[i][j].upper()
                                 elif rawLst[0][j] == "D. QTY":
                                     singleLst[7] = rawLst[i][j]
                                 elif rawLst[0][j] == "S. QTY":

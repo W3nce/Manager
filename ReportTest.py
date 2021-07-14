@@ -433,7 +433,7 @@ def openPurchase():
     def orderCalPro():
         calWin = Toplevel()
         calWin.title("Select the Date")
-        calWin.geometry("280x260")
+        calWin.geometry("270x260")
         
         cal = Calendar(calWin, selectmode="day", date_pattern="y-mm-dd")
         cal.grid(row=0, column=0, columnspan=3, padx=10, pady=10, sticky=EW)
@@ -1719,7 +1719,7 @@ def openPurchase():
             def CalendarAppBase(ENTRYwidget):
                 calWin = Toplevel()
                 calWin.title("Select the Date")
-                calWin.geometry("280x240")
+                calWin.geometry("270x260")
                 
                 cal = Calendar(calWin, selectmode="day", date_pattern="y-mm-dd")
                 cal.grid(row=0, column=0, columnspan=3, padx=10, pady=10, sticky=EW)
