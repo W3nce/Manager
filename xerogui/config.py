@@ -1,4 +1,6 @@
 import os
+import pathlib
+import win32com.client as client
 from tkinter import *
 
 XeroConfigKey = ['XERO_EMAIL','CHROME_DRIVER_LOCATION','CLIENT_ID','CLIENT_SECRET','CLIENT_SECRET2','CONFIGURED']
@@ -27,9 +29,16 @@ def ConfigureChrome(email = '',driver = ''):
         global output,XERO_EMAIL,CHROME_DRIVER_LOCATION,CONFIGURED
         XERO_EMAIL = emailEnt.get()
         CHROME_DRIVER_LOCATION = driverEnt.get()
-        root.destroy()
-        output = XERO_EMAIL,CHROME_DRIVER_LOCATION,1
         
+        if os.path.exists(CHROME_DRIVER_LOCATION):
+            output = XERO_EMAIL,CHROME_DRIVER_LOCATION,1
+            root.destroy()
+        else:
+            ErrorLabel['text'] = "Please make sure the Chrome Driver is in specificed FilePath\nPath: "+CHROME_DRIVER_LOCATION
+        
+        
+        
+            
     def Close():
         global output,XERO_EMAIL,CHROME_DRIVER_LOCATION,CONFIGURED
         if messagebox.askokcancel("Quit", "Do you want to quit?",parent = root):
@@ -68,6 +77,12 @@ def ConfigureChrome(email = '',driver = ''):
     CancelButton = Button(ConfigFrame, text = "CANCEL", command = Close , width = 8)
     CancelButton.grid(row=1, column=3, columnspan = 2, padx=10, pady=(10,0),sticky = NSEW)
     
+    ErrorFrame = Frame(ConfigFrame)
+    ErrorFrame.grid(row=3, column=0, columnspan = 4, padx=10, pady=(10,0),sticky = NSEW)
+    
+    ErrorLabel = Label(ErrorFrame, text = '',font = 'Helvetica 9 bold',fg = 'red')
+    ErrorLabel.pack()
+    
     root.mainloop()
     return output
    
@@ -91,21 +106,28 @@ def OverWrite(Reconfigure = False):
                         start = line.find('<<') + len('<<')
                         end = line.find('>>')
                         CHROME_DRIVER_LOCATION = line[start:end]
+                        continue
                         
                     if XeroConfigKey[2] in line:
                         start = line.find('<<') + len('<<')
                         end = line.find('>>')
                         CLIENT_ID = line[start:end]
+                        continue
+                    
+                                        
+                    if XeroConfigKey[4] in line:
+                        start = line.find('<<') + len('<<')
+                        end = line.find('>>')
+                        CLIENT_SECRET2 = line[start:end]
+                        continue
                         
                     if XeroConfigKey[3] in line:
                         start = line.find('<<') + len('<<')
                         end = line.find('>>')
                         CLIENT_SECRET = line[start:end]
+                        continue
                         
-                    if XeroConfigKey[4] in line:
-                        start = line.find('<<') + len('<<')
-                        end = line.find('>>')
-                        CLIENT_SECRET2 = line[start:end]
+
                                         
                     if XeroConfigKey[5] in line:
                         start = line.find('<<') + len('<<')

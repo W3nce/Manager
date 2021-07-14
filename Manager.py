@@ -8,6 +8,7 @@ from PIL import ImageTk, Image
 from mysql import *
 import mysql.connector
 import csv
+import re
 import ConnConfig
 import CountryRef
 from xerogui.config import OverWrite,CLIENT_ID,CLIENT_SECRET,XERO_EMAIL,CHROME_DRIVER_LOCATION
@@ -18,6 +19,7 @@ import Login
 if Login.AUTH:
     import EmployeeTest
     import Vendor
+    import RFQ
     import ReportTest
     import Instruction
 
@@ -48,7 +50,7 @@ if Login.AUTH:
     root.state("zoomed")
     root.rowconfigure(0, weight=1)
     root.columnconfigure(0, weight=1)
-    
+    global tabNote
     tabNote = ttk.Notebook(root)
     tabNote.grid(row=0, column=0, sticky="NSEW") 
      
@@ -166,7 +168,7 @@ if Login.AUTH:
     ProjectTreeView.column("#0", anchor = CENTER, width =60, minwidth = 0)
     # ProjectTreeView.column("#0",  width=0, stretch=NO)
     ProjectTreeView.column("ProClassID", anchor = CENTER, width = 70, minwidth = 30)
-    ProjectTreeView.column("ProName", anchor = CENTER, width= 135, minwidth = 30)
+    ProjectTreeView.column("ProName", anchor = W, width= 135, minwidth = 30)
     ProjectTreeView.column("ProManager", anchor = W, width = 95, minwidth = 30)
     ProjectTreeView.column("ProSupport", anchor = W, width = 95, minwidth = 30)
     ProjectTreeView.column("StartDate", anchor = CENTER, width = 100, minwidth = 30)
@@ -921,8 +923,8 @@ if Login.AUTH:
         # MachTreeView.column("#0", anchor = CENTER, width=45, minwidth=0)
         MachTreeView.column("#0",  width=0, stretch=NO)
         MachTreeView.column("MachID",anchor = CENTER, width = 50, minwidth = 30)
-        MachTreeView.column("MachName",anchor = CENTER, width = 130, minwidth = 50)
-        MachTreeView.column("LeadDesigner",anchor = CENTER, width = 130, minwidth = 50)
+        MachTreeView.column("MachName",anchor = W, width = 130, minwidth = 50)
+        MachTreeView.column("LeadDesigner",anchor = W, width = 130, minwidth = 50)
         MachTreeView.column("OrderQty",anchor = CENTER, width = 80, minwidth = 50)
         MachTreeView.column("CompQty",anchor = CENTER, width = 80, minwidth = 50)
         MachTreeView.column("DesDue",anchor = CENTER, width = 90, minwidth = 50)
@@ -1620,9 +1622,16 @@ if Login.AUTH:
                                                       "Close Machine Tab? This will also close ALL Tabs after it",
                                                       parent=frameMach)
             if respCloseTabMach == True:
-                tabLstMach = tabNote.winfo_children()
-                for i in range(1, len(tabLstMach)):
-                    tabLstMach[i].destroy()
+                tabObjDict = tabNote.children.copy()
+                tabkey = list(tabNote.children)
+                tab_names = ["Assembly Selection","Machine Selection","Bill of Materials"]
+                
+                for Tab in tabObjDict:
+                    
+                    if tabNote.tab('.!notebook.' + Tab, "text") in tab_names:
+                        
+                        tabObjDict[Tab].destroy()
+                    
                 buttonLoadPro.config(state=NORMAL)
                 
         def loadMach():
@@ -1691,12 +1700,12 @@ if Login.AUTH:
             # AssemTreeView.column("#0", anchor=CENTER, width=45)
             AssemTreeView.column("#0", width=0, stretch=NO)
             AssemTreeView.column("Num", anchor=CENTER, width=40)
-            AssemTreeView.column("Description", anchor=CENTER, width=80)
+            AssemTreeView.column("Description", anchor=W, width=80)
             AssemTreeView.column("Design", anchor=CENTER, width=75)
             AssemTreeView.column("Purchase", anchor=CENTER, width=75)
             AssemTreeView.column("Assembly", anchor=CENTER, width=75)
-            AssemTreeView.column("Designer", anchor=CENTER, width=90)
-            AssemTreeView.column("Locker", anchor=CENTER, width=90)
+            AssemTreeView.column("Designer", anchor=W, width=90)
+            AssemTreeView.column("Locker", anchor=W, width=90)
             AssemTreeView.column("Approved", anchor=CENTER, width=50)
             AssemTreeView.column("Num of Parts", anchor=CENTER, width=70)
             AssemTreeView.column("Parts Purchased", anchor=CENTER, width=80)
@@ -2624,9 +2633,15 @@ if Login.AUTH:
                                                            "Close Assembly Tab? This will also close ALL Tabs after it",
                                                            parent=frameAssem)
                 if respCloseTabAssem == True:
-                    tabLstAssem = tabNote.winfo_children()
-                    for i in range(2, len(tabLstAssem)):
-                        tabLstAssem[i].destroy()
+                    tabObjDict = tabNote.children.copy()
+                    tabkey = list(tabNote.children)
+                    tab_names = ["Assembly Selection","Bill of Materials"]
+                    
+                    for Tab in tabObjDict:
+                        
+                        if tabNote.tab('.!notebook.' + Tab, "text") in tab_names:
+                            
+                            tabObjDict[Tab].destroy()
                     buttonLoadMach.config(state=NORMAL)
 
             def loadAssem():
@@ -2712,12 +2727,12 @@ if Login.AUTH:
                 UnitTreeView.column("#0", width=0, stretch=NO)
                 # UnitTreeView.column("#0", width=50, anchor=W,stretch=NO)
                 UnitTreeView.column("Part", anchor=CENTER, width=45)
-                UnitTreeView.column("Description", anchor=CENTER, width=120)
+                UnitTreeView.column("Description", anchor=W, width=120)
                 UnitTreeView.column("D", anchor=CENTER, width=30)
                 UnitTreeView.column("CLS", anchor=CENTER, width=50)
                 UnitTreeView.column("V", anchor=CENTER, width=30)
-                UnitTreeView.column("Maker", anchor=CENTER, width=90)
-                UnitTreeView.column("Spec", anchor=CENTER, width=180)
+                UnitTreeView.column("Maker", anchor=W, width=90)
+                UnitTreeView.column("Spec", anchor=W, width=180)
                 UnitTreeView.column("DES", anchor=CENTER, width=35)
                 UnitTreeView.column("SPA", anchor=CENTER, width=35)
                 UnitTreeView.column("OH", anchor=CENTER, width=35)
@@ -2726,8 +2741,8 @@ if Login.AUTH:
                 UnitTreeView.column("BAL", anchor=CENTER, width=35)
                 UnitTreeView.column("RCV", anchor=CENTER, width=35)
                 UnitTreeView.column("OS", anchor=CENTER, width=35)
-                UnitTreeView.column("Remark", anchor=CENTER, width=100)
-                UnitTreeView.column("Vendor", anchor=CENTER, width=100)
+                UnitTreeView.column("Remark", anchor=W, width=100)
+                UnitTreeView.column("Vendor", anchor=W, width=100)
                 UnitTreeView.column("UnitCost", anchor=CENTER, width=80)
                 UnitTreeView.column("TotalCost", anchor=CENTER, width=80)
                 
@@ -3499,6 +3514,10 @@ if Login.AUTH:
                     DesQtyVal = int(desQty)
                     OrderQtyVal = int(orderQty)
                     
+                    def removeSymbol(cost):
+                        val = re.sub("[^0-9\.]", "", str(cost))
+                        return val
+                    
                     def sumTotalCost(unitCst, num):
                         if unitCst == None or unitCst == "":
                             return 0
@@ -3572,7 +3591,7 @@ if Login.AUTH:
                         if fullLst[i][17] == "":
                             UnitCost = None
                         else:
-                            UnitCost = float(fullLst[i][17])
+                            UnitCost = float(removeSymbol(fullLst[i][17]))
                         
                         if fullLst[i][18] == "":
                             TotalUnitCost = sumTotalCost(UnitCost, REQ)
@@ -4469,7 +4488,10 @@ if Login.AUTH:
     
     
     def openVendor():
-        Vendor.RunVEND("root", "MWA1024")
+        Vendor.RunVEND()
+        
+    def openRFQ():
+        RFQ.openRFQ(tabNote)
     
     def ConfigureChrome():
         OverWrite(Reconfigure = True)
@@ -4483,14 +4505,19 @@ if Login.AUTH:
     fileMenu.add_command(label="Edit Vendor", command=openVendor)
     fileMenu.add_command(label="Edit Stock")
     fileMenu.add_separator()
-    fileMenu.add_command(label="Generate Purchase Order", command=ReportTest.openPurchase)
-    fileMenu.add_separator()
     fileMenu.add_command(label="Edit Currency Exchange Rate", command=CountryRef.openCurrency)
     fileMenu.add_separator()
     fileMenu.add_command(label="Edit Chrome/Xero Details", command=ConfigureChrome)
     fileMenu.add_separator()
     fileMenu.add_command(label="Exit", command=root.destroy)
         
+    ProcurementMenu = Menu(menuBar, tearoff=0)
+    menuBar.add_cascade(label="Procurement", menu=ProcurementMenu)
+    ProcurementMenu.add_command(label="Generate RFQ", command=openRFQ)
+    ProcurementMenu.add_separator()
+    ProcurementMenu.add_command(label="Generate Purchase Order", command=ReportTest.openPurchase)
+    
+    
     helpMenu = Menu(menuBar, tearoff=0)
     menuBar.add_cascade(label="Help", menu=helpMenu)
     helpMenu.add_command(label="Instructions", command=Instruction.openInstruction)    

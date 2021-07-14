@@ -354,80 +354,103 @@ PasswordLabel = Label(LoginFrame, text="Password")
 PasswordLabel.grid(row=2, column=0, padx=10, pady=(10,0),sticky = W)
 Label(LoginFrame, text=":", font=("Arial", 10)).grid(row=2, column=1,pady=(10,0),sticky = W)
 
-ResetPasswordLabel = Label(LoginFrame, text="Reset Password", cursor="hand2",fg="blue")
-ResetPasswordLabel.grid(row=3, column=0, padx=10, pady=(10,0),sticky = W,columnspan = 2)
-ResetPasswordLabel.bind("<Button-1>", lambda e: print('Contact Admin'))
+
 
 global LOCKEDUSER 
 LOCKEDUSER = None
 
+def ChangePW(username = None):
+    ChangePWWin = Toplevel()
+    ChangePWWin.title("Create New Password")
+    ChangePWWin.geometry("460x300")
+    ChangePWWin.attributes('-topmost', 1)
+    
+    TitleLabel = Label(ChangePWWin, text = "Reset Password", font=("Arial", 10))
+    TitleLabel.grid(row=0, column=0,padx=10, pady=10,columnspan  = 3 , sticky=W)
+
+    CurrentUserName = Entry(ChangePWWin, width=18)
+    CurrentUserName.grid(row=1, column=2, padx=20, pady=(10,0),sticky = W)
+    CurrentUserNameLabel = Label(ChangePWWin, text="Username")
+    CurrentUserNameLabel.grid(row=1, column=0, padx=10, pady=(10,0),sticky = W)
+    Label(ChangePWWin, text=":", font=("Arial", 10)).grid(row=1, column=1,pady=(10,0),sticky = W)
+    CurrentUserName.insert(END, username if username else '')
+    
+    
+    CurrentPassword = Entry(ChangePWWin, show="*", width=18)
+    CurrentPassword.grid(row=2, column=2, padx=20, pady=(10,0),sticky = W)
+    CurrentPasswordLabel = Label(ChangePWWin, text="Current Password")
+    CurrentPasswordLabel.grid(row=2, column=0, padx=10, pady=(10,0),sticky = W)
+    Label(ChangePWWin, text=":", font=("Arial", 10)).grid(row=2, column=1,pady=(10,0),sticky = W)
+    
+    ChangePassword = Entry(ChangePWWin, show="*", width=18)
+    ChangePassword.grid(row=3, column=2, padx=20, pady=(10,0),sticky = W)
+    ChangePasswordLabel = Label(ChangePWWin, text="New Password")
+    ChangePasswordLabel.grid(row=3, column=0, padx=10, pady=(10,0),sticky = W)
+    Label(ChangePWWin, text=":", font=("Arial", 10)).grid(row=3, column=1,pady=(10,0),sticky = W)
+    
+    ConfirmPassword = Entry(ChangePWWin, show="*", width=18)
+    ConfirmPassword.grid(row=4, column=2, padx=20, pady=(10,0),sticky = W)
+    ConfirmPasswordLabel = Label(ChangePWWin, text="Confirm Password")
+    ConfirmPasswordLabel.grid(row=4, column=0, padx=10, pady=(10,0),sticky = W)
+    Label(ChangePWWin, text=":", font=("Arial", 10)).grid(row=4, column=1,pady=(10,0),sticky = W)
+    
+    ErrorFrame = Frame(ChangePWWin)
+    ErrorFrame.grid(row=5, column=0, padx=10, pady=(10,0),sticky = W,columnspan = 3)
+    
+    MismatchLabel = Label(ErrorFrame, text = '' , font = 'Helvetica 8 bold', fg = 'red')
+    MismatchLabel.pack()
+    
+    def ConfirmChangePW():
+        Cursor = connLogin.cursor()
+        Cursor.execute(f"""SELECT * FROM `index_emp_master`.`login_data` 
+                         WHERE `EMPLOYEE_ID` = '{CurrentUserName.get()}' """)
+        result = Cursor.fetchall()
+
+        if result:
+            pass
+        else:
+            MismatchLabel['text'] = 'Please enter a valid username'
+            return
+        
+        res = result[0]
+
+        Cursor.execute(f"""SELECT SHA1('{CurrentPassword.get()}')""")
+        CurrPW = Cursor.fetchall()[0]
+        if res[3] == CurrPW[0] and CurrentPassword.get() == ChangePassword.get():
+            MismatchLabel['text'] = 'Please use a new password'
+            return
+        
+        if res[3] == CurrPW[0] and ChangePassword.get() == ConfirmPassword.get():
+            try:
+                Cursor.execute(f"""
+                               UPDATE `index_emp_master`.`login_data`
+                               SET
+                               EMPLOYEE_PW = SHA1('{ConfirmPassword.get()}')
+                               WHERE EMPLOYEE_ID = '{CurrentUserName.get()}'
+                               """)
+                connLogin.commit()
+                Popup = messagebox.showinfo("Password saved", "Password changed successfully", parent = ChangePWWin)
+                ChangePWWin.destroy()
+            except Error as e:
+                connLogin.rollback()
+                Popup = messagebox.showerror("Database Error", "Failed to reset password", parent = ChangePWWin)
+        else:
+            MismatchLabel['text'] = 'Password Mismatch/Wrong Password'
+            return
+            
+        Cursor.close()
+        
+    ConfirmChangePWButton = Button(ChangePWWin,text = 'Change Password',command = ConfirmChangePW)
+    ConfirmChangePWButton.grid(row=6, column=2, padx=10, pady=(10,0),sticky = EW)
+     
+ResetPasswordLabel = Label(LoginFrame, text="Reset Password", cursor="hand2",fg="blue")
+ResetPasswordLabel.grid(row=3, column=0, padx=10, pady=(10,0),sticky = W,columnspan = 2)
+ResetPasswordLabel.bind("<Button-1>", lambda e: ChangePW())
+
 def Login():
     global AUTH,AUTHLVL,LOCKEDUSER
     LOCKEDUSER = (User.get(),Password.get())
-    def ChangePW():
-        ChangePWWin = Tk()
-        ChangePWWin.title("Create New Password")
-        ChangePWWin.geometry("460x300")
-        ChangePWWin.attributes('-topmost', 1)
-        
-        TitleLabel = Label(ChangePWWin, text = "Reset Password", font=("Arial", 10))
-        TitleLabel.grid(row=0, column=0,padx=10, pady=10,columnspan  = 3 , sticky=W) 
-        
-        CurrentPassword = Entry(ChangePWWin, show="*", width=18)
-        CurrentPassword.grid(row=1, column=2, padx=20, pady=(10,0),sticky = W)
-        CurrentPasswordLabel = Label(ChangePWWin, text="Current Password")
-        CurrentPasswordLabel.grid(row=1, column=0, padx=10, pady=(10,0),sticky = W)
-        Label(ChangePWWin, text=":", font=("Arial", 10)).grid(row=1, column=1,pady=(10,0),sticky = W)
-        
-        ChangePassword = Entry(ChangePWWin, show="*", width=18)
-        ChangePassword.grid(row=2, column=2, padx=20, pady=(10,0),sticky = W)
-        ChangePasswordLabel = Label(ChangePWWin, text="New Password")
-        ChangePasswordLabel.grid(row=2, column=0, padx=10, pady=(10,0),sticky = W)
-        Label(ChangePWWin, text=":", font=("Arial", 10)).grid(row=2, column=1,pady=(10,0),sticky = W)
-        
-        ConfirmPassword = Entry(ChangePWWin, show="*", width=18)
-        ConfirmPassword.grid(row=3, column=2, padx=20, pady=(10,0),sticky = W)
-        ConfirmPasswordLabel = Label(ChangePWWin, text="Confirm Password")
-        ConfirmPasswordLabel.grid(row=3, column=0, padx=10, pady=(10,0),sticky = W)
-        Label(ChangePWWin, text=":", font=("Arial", 10)).grid(row=3, column=1,pady=(10,0),sticky = W)
-        
-        ErrorFrame = Frame(ChangePWWin)
-        ErrorFrame.grid(row=4, column=0, padx=10, pady=(10,0),sticky = W,columnspan = 2)
-        
-        MismatchLabel = Label(ErrorFrame, text = 'Password Mismatch/Wrong Password', font = 'Helvetica 8 bold', fg = 'red')
-        
-        def ConfirmChangePW():
-            global LOCKEDUSER
-            Cursor = connLogin.cursor()
-            Cursor.execute(f"""SELECT * FROM `index_emp_master`.`login_data` 
-                             WHERE `EMPLOYEE_ID` = '{LOCKEDUSER[0]}' """)
-            res = Cursor.fetchall()[0]
-            Cursor.execute(f"""SELECT SHA1('{CurrentPassword.get()}')""")
-            CurrPW = Cursor.fetchall()[0]
-            if res[3] == CurrPW[0] and ChangePassword.get() == ConfirmPassword.get():
-                try:
-                    Cursor.execute(f"""
-                                   UPDATE `index_emp_master`.`login_data`
-                                   SET
-                                   EMPLOYEE_PW = SHA1('{ConfirmPassword.get()}')
-                                   WHERE EMPLOYEE_ID = '{LOCKEDUSER[0]}'
-                                   """)
-                    connLogin.commit()
-                    Popup = messagebox.showinfo("Password saved", "Password changed successfully", parent = ChangePWWin)
-                    ChangePWWin.destroy()
-                except Error as e:
-                    connLogin.rollback()
-                    Popup = messagebox.showerror("Database Error", "Failed to reset password", parent = ChangePWWin)
-            else:
-                MismatchLabel.pack()
-             
-                
-            Cursor.close()
-            
-        ConfirmChangePWButton = Button(ChangePWWin,text = 'Change Password',command = ConfirmChangePW)
-        ConfirmChangePWButton.grid(row=4, column=2, padx=10, pady=(10,0),sticky = W)
-        
-        ChangePWWin.mainloop() 
+    
         
         
     try:
@@ -448,7 +471,7 @@ def Login():
                 AUTHLVL = res[2]
                 root.destroy()
                 if LOCKEDUSER[1] == 'MWA2021':
-                    ChangePW()
+                    ChangePW(LOCKEDUSER[0])
             else:
                 Popup = messagebox.showerror("Authentication Failed", "Please enter a valid password",parent = root)
             
