@@ -251,7 +251,11 @@ if Login.AUTH:
         for yr in checkYearLst:
             ProjectTreeView.insert(parent="", index=END, iid=yr, text=yr,
                                     values=("",))
-
+        
+        sortYear = sorted(checkYearLst)
+        yearNumLst = list(range(len(checkYearLst)))
+        dictYearAndNum = dict(zip(sortYear, yearNumLst))
+        
         for rec in recLst:
             EstCost = f"{rec[13]} SGD"
             ProjectTreeView.insert(parent=f"Y20{rec[1][1:3]}", index=END, iid=rec[0], text="", 
@@ -261,6 +265,30 @@ if Login.AUTH:
                                             statLst[rec[9]], rec[10], rec[11], rec[12],
                                             EstCost, rec[14]))
         
+        yearVal = ProjectTreeView.get_children()
+        for yr in yearVal:
+            iidLst = ProjectTreeView.get_children(yr)
+            YrNum = dictYearAndNum.get(yr)
+            ProjectTreeView.move(yr, "", YrNum)
+            
+            oidLst = list(iidLst)
+            indexLst = []
+            for rec in recLst:
+                if str(rec[0]) in iidLst:
+                    indexVal = int(rec[1][1:])
+                    indexLst.append(indexVal)
+            
+            numLst = list(range(len(indexLst)))
+
+            sortIndex = sorted(indexLst)
+            dictIndexAndOid = dict(zip(indexLst, oidLst))
+            dictNumAndIndex = dict(zip(numLst, sortIndex))
+            
+            for i in numLst:
+                IndexVal = dictNumAndIndex.get(i)
+                oidVal = dictIndexAndOid.get(IndexVal)             
+                ProjectTreeView.move(oidVal, yr, i)
+                
         connMain.commit()
         curMain.close()
         
