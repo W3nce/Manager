@@ -19,6 +19,7 @@ import Login
 if Login.AUTH:
     import EmployeeTest
     import Vendor
+    import RFQ
     import ReportTest
     import Instruction
 
@@ -49,7 +50,7 @@ if Login.AUTH:
     root.state("zoomed")
     root.rowconfigure(0, weight=1)
     root.columnconfigure(0, weight=1)
-    
+    global tabNote
     tabNote = ttk.Notebook(root)
     tabNote.grid(row=0, column=0, sticky="NSEW") 
      
@@ -1621,9 +1622,16 @@ if Login.AUTH:
                                                       "Close Machine Tab? This will also close ALL Tabs after it",
                                                       parent=frameMach)
             if respCloseTabMach == True:
-                tabLstMach = tabNote.winfo_children()
-                for i in range(1, len(tabLstMach)):
-                    tabLstMach[i].destroy()
+                tabObjDict = tabNote.children.copy()
+                tabkey = list(tabNote.children)
+                tab_names = ["Assembly Selection","Machine Selection","Bill of Materials"]
+                
+                for Tab in tabObjDict:
+                    
+                    if tabNote.tab('.!notebook.' + Tab, "text") in tab_names:
+                        
+                        tabObjDict[Tab].destroy()
+                    
                 buttonLoadPro.config(state=NORMAL)
                 
         def loadMach():
@@ -2625,9 +2633,15 @@ if Login.AUTH:
                                                            "Close Assembly Tab? This will also close ALL Tabs after it",
                                                            parent=frameAssem)
                 if respCloseTabAssem == True:
-                    tabLstAssem = tabNote.winfo_children()
-                    for i in range(2, len(tabLstAssem)):
-                        tabLstAssem[i].destroy()
+                    tabObjDict = tabNote.children.copy()
+                    tabkey = list(tabNote.children)
+                    tab_names = ["Assembly Selection","Bill of Materials"]
+                    
+                    for Tab in tabObjDict:
+                        
+                        if tabNote.tab('.!notebook.' + Tab, "text") in tab_names:
+                            
+                            tabObjDict[Tab].destroy()
                     buttonLoadMach.config(state=NORMAL)
 
             def loadAssem():
@@ -4474,7 +4488,10 @@ if Login.AUTH:
     
     
     def openVendor():
-        Vendor.RunVEND("root", "MWA1024")
+        Vendor.RunVEND()
+        
+    def openRFQ():
+        RFQ.openRFQ(tabNote)
     
     def ConfigureChrome():
         OverWrite(Reconfigure = True)
@@ -4488,14 +4505,19 @@ if Login.AUTH:
     fileMenu.add_command(label="Edit Vendor", command=openVendor)
     fileMenu.add_command(label="Edit Stock")
     fileMenu.add_separator()
-    fileMenu.add_command(label="Generate Purchase Order", command=ReportTest.openPurchase)
-    fileMenu.add_separator()
     fileMenu.add_command(label="Edit Currency Exchange Rate", command=CountryRef.openCurrency)
     fileMenu.add_separator()
     fileMenu.add_command(label="Edit Chrome/Xero Details", command=ConfigureChrome)
     fileMenu.add_separator()
     fileMenu.add_command(label="Exit", command=root.destroy)
         
+    ProcurementMenu = Menu(menuBar, tearoff=0)
+    menuBar.add_cascade(label="Procurement", menu=ProcurementMenu)
+    ProcurementMenu.add_command(label="Generate RFQ", command=openRFQ)
+    ProcurementMenu.add_separator()
+    ProcurementMenu.add_command(label="Generate Purchase Order", command=ReportTest.openPurchase)
+    
+    
     helpMenu = Menu(menuBar, tearoff=0)
     menuBar.add_cascade(label="Help", menu=helpMenu)
     helpMenu.add_command(label="Instructions", command=Instruction.openInstruction)    

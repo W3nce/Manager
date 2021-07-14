@@ -21,6 +21,8 @@ from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.chrome.options import Options
 
+import os
+
 import time
 
 LoginURL = 'https://login.xero.com/identity/connect/authorize?response_type=code&client_id=YOURCLIENTID&redirect_uri=YOURREDIRECTURI&scope= offline_access openid profile email accounting.transactions&state=123'
@@ -45,6 +47,16 @@ ConnectedTENANT = None
         #
 
 def XeroFirstAuth():
+    if not os.path.exists(CHROME_DRIVER_LOCATION):
+        root = Tk()
+        root.title('Chrome Driver Error')
+        Label(root,text = 'Chrome Driver not found in path\n' + CHROME_DRIVER_LOCATION).pack()
+        Button(root,command = lambda : root.destroy(),text = 'Ok',width = 14).pack()
+        
+        root.mainloop()
+        
+        return
+    
     global LOGIN
      
     # 1. Send a user to authorize your app   
@@ -54,6 +66,8 @@ def XeroFirstAuth():
         
         xeroemail = None
         xeropw = None
+        
+        
         ReqPW = Tk()
         ReqPW.iconbitmap("MWA_Icon.ico")
         ReqPW.title('Xero Login')

@@ -16,8 +16,7 @@ logininfo = (ConnConfig.host,ConnConfig.username,ConnConfig.password)
 
 
 
-def RunVEND(username,pw):    
-    LOCKEDUSER = (username,pw)
+def RunVEND():
     def front(window):
         window.attributes('-topmost', 1)
         window.attributes('-topmost', 0)
