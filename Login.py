@@ -171,7 +171,52 @@ SetupCommand = ["""
                 
                     ENGINE = InnoDB
                     DEFAULT CHARACTER SET = utf8mb4
-                    COLLATE = utf8mb4_0900_ai_ci"""]
+                    COLLATE = utf8mb4_0900_ai_ci""",
+                    
+                    """
+                    CREATE SCHEMA IF NOT EXISTS `RFQ_MASTER` 
+                    DEFAULT CHARACTER SET utf8mb4 
+                    COLLATE utf8mb4_0900_ai_ci"""
+                    ,
+                    
+                   """
+                   CREATE TABLE IF NOT EXISTS `RFQ_MASTER`.`RFQ_LIST` 
+                   (`oid` INT AUTO_INCREMENT PRIMARY KEY,
+                     `RFQ_REF_NO` CHAR(15),
+                     `PROJECT_CLS_ID` VARCHAR(10) DEFAULT NULL,
+                     `MACH_ID` VARCHAR(5) DEFAULT NULL,
+                     `MACH_DES_QTY` INT DEFAULT 0,
+                     `PARTS_COMP` INT DEFAULT 0,
+                     `TOTAL_PARTS` INT DEFAULT 0,
+                     `VENDOR_NAME` VARCHAR(20) DEFAULT NULL,
+                     `STATUS` INT DEFAULT 0,
+                     `ISSUE_DATE` DATE DEFAULT NULL,
+                     `REPLY_DATE` DATE DEFAULT NULL,
+                     `DELIVER_DATE` DATE DEFAULT NULL,
+                     `DATE_OF_ENTRY` DATETIME NOT NULL,
+                     `CURRENCY` CHAR(3) DEFAULT NULL,
+                     `PURCHASER` VARCHAR(10) DEFAULT NULL,
+                     `TOTAL_TCURR` FLOAT DEFAULT 0.00,
+                     `TOTAL_SGD` FLOAT DEFAULT 0.00)
+                
+                    ENGINE = InnoDB
+                    DEFAULT CHARACTER SET = utf8mb4
+                    COLLATE = utf8mb4_0900_ai_ci"""
+                    ,
+                    """
+                   CREATE TABLE IF NOT EXISTS `RFQ_MASTER`.`STATUS_MASTER` 
+                   (`STATUS_ID` INT PRIMARY KEY,
+                     `STATUS_NAME` VARCHAR(20))
+                
+                    ENGINE = InnoDB
+                    DEFAULT CHARACTER SET = utf8mb4
+                    COLLATE = utf8mb4_0900_ai_ci""",
+                    
+                    """
+                    REPLACE INTO `RFQ_MASTER`.`STATUS_MASTER` 
+                    VALUES
+                    (0, 'CREATED'),(1, 'ISSUED'),(2, 'REPLY DUE'),(3, 'COMPLETED')
+                    """]
              
                 
              
@@ -199,7 +244,7 @@ if existLst == []:
     curCom.execute(defaultComSql, defaultComInfo)
     connLogin.commit()
 curCom.close()
-                     
+ 
 curCcy = connLogin.cursor()
 curCcy.execute("SELECT * FROM `CURRENCY_MASTER`.`CCY_LIST`")
 existLst = curCcy.fetchall()
@@ -227,41 +272,6 @@ curCcy.close()
 
 
 
-curCls = connLogin.cursor()
-curCls.execute("SELECT * FROM `INDEX_VEND_MASTER`.`CLASS_LIST`")
-existLst = curCls.fetchall()
-
-if existLst == []:
-    defaultCcy = f"""INSERT INTO `INDEX_VEND_MASTER`.`CLASS_LIST` (
-    CLASS, DESCRIPTION)
-    VALUES (%s, %s)"""
-                
-    defaultLst = [("N", "Normal"),
-                  ("FG", "Fabrication - General Tolerance"),
-                  ("FOT", "Fabrication - Others"),
-                  ("FP", "Fabrication - Precision"),
-                  ("FPF", "Fabrication - Alu Profile Work"),
-                  ("FPL", "Fabrication - Polymer"),
-                  ("FPW", "Fabrication - Plastic Sheet Work"),
-                  ("FSC", "Fabrication - Signcraft"),
-                  ("FSH", "Fabrication - Sheet Metal Work"),
-                  ("FSP", "Fabrication - Semi Precision"),
-                  ("FWD", "Fabrication - Welded Structures"),
-                  ("FWW", "Fabrication - Woodwork"),
-                  ("GSCE", "General Supply - Computer Hardware"),
-                  ("GSHR", "General Supply - Human Resources"),
-                  ("GSOM", "General Supply - Office Maintenance"),
-                  ("GSOS", "General Supply - Office Supply"),
-                  ("GSPE", "General Supply - Project Equipment"),
-                  ("GSPM", "General Supply - Project Material"),
-                  ("GSPS", "General Supply - Project Services"),
-                  ("GSTP", "General Supply - Transportation"),
-                  ("MAT", "Fabrication - Meterial Treatment")]
-    
-    for clsVal in defaultLst:
-        curCls.execute(defaultCcy, clsVal)
-    connLogin.commit()
-curCls.close()
 
 
              
@@ -320,6 +330,41 @@ for command in CreateVendDatabase:
 
 curVendInit.close()                 
                  
+curCls = connLogin.cursor()
+curCls.execute("SELECT * FROM `INDEX_VEND_MASTER`.`CLASS_LIST`")
+existLst = curCls.fetchall()
+
+if existLst == []:
+    defaultCcy = f"""INSERT INTO `INDEX_VEND_MASTER`.`CLASS_LIST` (
+    CLASS, DESCRIPTION)
+    VALUES (%s, %s)"""
+                
+    defaultLst = [("N", "Normal"),
+                  ("FG", "Fabrication - General Tolerance"),
+                  ("FOT", "Fabrication - Others"),
+                  ("FP", "Fabrication - Precision"),
+                  ("FPF", "Fabrication - Alu Profile Work"),
+                  ("FPL", "Fabrication - Polymer"),
+                  ("FPW", "Fabrication - Plastic Sheet Work"),
+                  ("FSC", "Fabrication - Signcraft"),
+                  ("FSH", "Fabrication - Sheet Metal Work"),
+                  ("FSP", "Fabrication - Semi Precision"),
+                  ("FWD", "Fabrication - Welded Structures"),
+                  ("FWW", "Fabrication - Woodwork"),
+                  ("GSCE", "General Supply - Computer Hardware"),
+                  ("GSHR", "General Supply - Human Resources"),
+                  ("GSOM", "General Supply - Office Maintenance"),
+                  ("GSOS", "General Supply - Office Supply"),
+                  ("GSPE", "General Supply - Project Equipment"),
+                  ("GSPM", "General Supply - Project Material"),
+                  ("GSPS", "General Supply - Project Services"),
+                  ("GSTP", "General Supply - Transportation"),
+                  ("MAT", "Fabrication - Meterial Treatment")]
+    
+    for clsVal in defaultLst:
+        curCls.execute(defaultCcy, clsVal)
+    connLogin.commit()
+curCls.close()
 
 
 AUTH = 0
@@ -400,6 +445,8 @@ def ChangePW(username = None):
     MismatchLabel = Label(ErrorFrame, text = '' , font = 'Helvetica 8 bold', fg = 'red')
     MismatchLabel.pack()
     
+    
+    
     def ConfirmChangePW():
         Cursor = connLogin.cursor()
         Cursor.execute(f"""SELECT * FROM `index_emp_master`.`login_data` 
@@ -429,7 +476,8 @@ def ChangePW(username = None):
                                WHERE EMPLOYEE_ID = '{CurrentUserName.get()}'
                                """)
                 connLogin.commit()
-                Popup = messagebox.showinfo("Password saved", "Password changed successfully", parent = ChangePWWin)
+                Popup = messagebox.showinfo("Password saved", "Password changed successfully, Please Login Again", parent = ChangePWWin)
+                Password.delete(0,END)
                 ChangePWWin.destroy()
             except Error as e:
                 connLogin.rollback()
@@ -442,6 +490,8 @@ def ChangePW(username = None):
         
     ConfirmChangePWButton = Button(ChangePWWin,text = 'Change Password',command = ConfirmChangePW)
     ConfirmChangePWButton.grid(row=6, column=2, padx=10, pady=(10,0),sticky = EW)
+    
+
      
 ResetPasswordLabel = Label(LoginFrame, text="Reset Password", cursor="hand2",fg="blue")
 ResetPasswordLabel.grid(row=3, column=0, padx=10, pady=(10,0),sticky = W,columnspan = 2)
@@ -469,14 +519,17 @@ def Login():
                 Popup = messagebox.showinfo("Authentication Success", "Database Connected",parent = root)
                 AUTH = 1
                 AUTHLVL = res[2]
-                root.destroy()
+                
                 if LOCKEDUSER[1] == 'MWA2021':
                     ChangePW(LOCKEDUSER[0])
+                    
+                else:
+                    root.destroy()
             else:
                 Popup = messagebox.showerror("Authentication Failed", "Please enter a valid password",parent = root)
             
         else:
-            Popup = showerror.showinfo("Authentication Failed", "Please enter a valid username",parent = root)
+            Popup = messagebox.showinfo("Authentication Failed", "Please enter a valid username",parent = root)
 
     
     except Error as e:
