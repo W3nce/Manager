@@ -92,6 +92,7 @@ def getExRate(currency):
     curCcy.execute(f"SELECT ExRate FROM `CCY_LIST` WHERE CcyAcro = '{currency}'")
     exRate = curCcy.fetchall()
     if exRate == []:
+        messagebox.showerror('Get Exchange Rate', 'No Exchange Rate for this Currency, 0.00 returned')
         return 0.00
     else:
         return exRate[0][0]

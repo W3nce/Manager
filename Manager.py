@@ -3272,7 +3272,7 @@ if Login.AUTH:
                         
                         VendorBox.config(state="normal")
                         VendorBox.delete(0, END)
-                        VendorBox.insert(0, resultSelect[0][17])
+                        VendorBox.insert(0, resultSelect[0][17] if resultSelect[0][17] else '' )
                         VendorBox.config(state="readonly")
                         
                         if resultSelect[0][18] == None:
@@ -4520,6 +4520,9 @@ if Login.AUTH:
         
     def openRFQ():
         RFQ.openRFQ(tabNote)
+        
+    def reviewRFQ():
+        RFQ.reviewRFQ(tabNote)
     
     def ConfigureChrome():
         OverWrite(Reconfigure = True)
