@@ -1,4 +1,0 @@
-XERO_EMAIL = <<wencengcs@gmail.com>>
-CHROME_LOCATION = <<>>
-CHROME_DRIVER_LOCATION = <<C:\Users\User\OneDrive\Desktop\Current\xerogui\chromedriverv91.exe>>
-CONFIGURED = <<1>>
