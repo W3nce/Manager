@@ -1,0 +1,6 @@
+XERO_EMAIL = <<>>
+CHROME_DRIVER_LOCATION = <<C:\Users\Michael\Desktop\NUS\EG3612 Vacation Industrial Attachment\Testing Code\Current\chromedriverv91.exe>>
+CLIENT_ID = <<3B806419C88F4E638B2ED6F7876B037E>>
+CLIENT_SECRET = <<J_3AsYU9ZAesIrSBvUrzBtvylcpnrs9LoZIflIZM-kOJCPhK>>
+CLIENT_SECRET2 = <<0Hpkg89SeEG1gEBOlEzYVe23dYRnSVqP7dWrsLjVkAi7ULml>>
+CONFIGURED = <<1>>

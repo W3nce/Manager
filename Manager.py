@@ -224,16 +224,35 @@ if Login.AUTH:
                                    "Please Select a Project", parent=framePro) 
         else:
             deletePro()
+            
+    def loadProClick(e):
+        if buttonLoadPro["state"] == "normal":
+            loadPro()
+
+    def exitAppEsc(e):
+        tabNum = tabNote.index("current")
+        if tabNum == 0:
+            respExitApp = messagebox.askokcancel("Confirmation",
+                                                 "Exit Management App Now?",
+                                                 parent=framePro)
+            if respExitApp == True:
+                root.destroy()
+            else:
+                pass
+
+
 
     ProjectTreeView.bind("<Button-3>", deselectProClick)
     ProjectTreeView.bind("<Double-Button-1>", selectProClick)
     ProjectTreeView.bind("<Return>", updateProReturn)
-    ProjectTreeView.bind("<Delete>", deleteProDel)  
-        
-        
-        
-        
-        
+    ProjectTreeView.bind("<Delete>", deleteProDel)
+    ProjectTreeView.bind("<Button-2>", loadProClick)
+    ProjectTreeView.bind("<Escape>", exitAppEsc)
+
+
+
+
+
     def queryTreePro():
         curMain = connMain.cursor()
         curMain.execute("SELECT * FROM PROJECT_INFO")
@@ -923,8 +942,12 @@ if Login.AUTH:
         
         style.map("Treeview")
         
+        # MachTabTitleLabel = Label(frameMach, 
+        #                           text=f"Machine List for Project {proName} {proDesc}", 
+        #                           font=("Arial", 12))
+        
         MachTabTitleLabel = Label(frameMach, 
-                                  text=f"Machine List for Project {proName} {proDesc}", 
+                                  text=f"Machine List for Project {proName}", 
                                   font=("Arial", 12))
         MachTabTitleLabel.grid(row=0, column=0, padx=0, pady=(10,3), ipadx=0, ipady=0, sticky=W+E) 
         MachTreeFrame = Frame(frameMach)
@@ -1013,10 +1036,21 @@ if Login.AUTH:
             else:
                 deleteMach()
 
+        def loadMachClick(e):
+            if buttonLoadMach["state"] == "normal":
+                loadMach()
+
+        def closeMachTabEsc(e):
+            tabNum = tabNote.index("current")
+            if tabNum == 1:
+                closeTabMach()
+
         MachTreeView.bind("<Button-3>", deselectMachClick)
         MachTreeView.bind("<Double-Button-1>", selectMachClick)
         MachTreeView.bind("<Return>", updateMachReturn)
-        MachTreeView.bind("<Delete>", deleteMachDel)  
+        MachTreeView.bind("<Delete>", deleteMachDel)
+        MachTreeView.bind("<Button-2>", loadMachClick)
+        MachTreeView.bind("<Escape>", closeMachTabEsc) 
 
 
 
@@ -1701,8 +1735,12 @@ if Login.AUTH:
             
             style.map("Treeview")
             
+            # AssemTabTitleLabel = Label(frameAssem, 
+            #                            text=f"Assembly List for Project {proName} {proDesc} - Machine {machName} {machDesc}", 
+            #                            font=("Arial", 12))
+            
             AssemTabTitleLabel = Label(frameAssem, 
-                                       text=f"Assembly List for Project {proName} {proDesc} - Machine {machName} {machDesc}", 
+                                       text=f"Assembly List for Machine {proName} - {machName}", 
                                        font=("Arial", 12))
             AssemTabTitleLabel.grid(row=0, column=0, padx=0, pady=(10,3), ipadx=0, ipady=0, sticky=W+E) 
             AssemTreeFrame = Frame(frameAssem)
@@ -1713,7 +1751,7 @@ if Login.AUTH:
             AssemTreeScroll.pack(side=RIGHT, fill=Y)
             
             AssemTreeView = ttk.Treeview(AssemTreeFrame, yscrollcommand=AssemTreeScroll.set, 
-                                        selectmode="browse")
+                                         selectmode="browse")
             AssemTreeScroll.config(command=AssemTreeView.yview)
             # AssemTreeView.grid(row=2, column=0, columnspan=10, padx=10)
             AssemTreeView.pack(padx=5, pady=5, ipadx=5, ipady=5, fill="x", expand=True)
@@ -1724,7 +1762,7 @@ if Login.AUTH:
                                         "Num of Parts", "Parts Purchased", "Parts Received",
                                         "Deleted", "OnHold", "DesQty", "CompQty",
                                         "ApproxCost")
-    
+
             # AssemTreeView.column("#0", anchor=CENTER, width=45)
             AssemTreeView.column("#0", width=0, stretch=NO)
             AssemTreeView.column("Num", anchor=CENTER, width=40)
@@ -1786,11 +1824,24 @@ if Login.AUTH:
                 else:
                     deleteAssem()
 
+            def loadAssemClick(e):
+                if buttonLoadAssem["state"] == "normal":
+                    loadAssem()
+    
+            def closeAssemTabEsc(e):
+                tabNum = tabNote.index("current")
+                if tabNum == 2:
+                    closeTabAssem()
+
             AssemTreeView.bind("<Button-3>", deselectAssemClick)
             AssemTreeView.bind("<Double-Button-1>", selectAssemClick)
             AssemTreeView.bind("<Return>", updateAssemReturn)
-            AssemTreeView.bind("<Delete>", deleteAssemDel)     
+            AssemTreeView.bind("<Delete>", deleteAssemDel)
+            AssemTreeView.bind("<Button-2>", loadAssemClick)
+            AssemTreeView.bind("<Escape>", closeAssemTabEsc)   
     
+
+
 
 
             def queryTreeAssem():
@@ -2865,11 +2916,19 @@ if Login.AUTH:
                             messagebox.showinfo("Update Successful", 
                                                 f"You Have Set Part {PartNumRef} as Normal", parent=frameUnit)
                 
+                def closeUnitTabEsc(e):
+                    tabNum = tabNote.index("current")
+                    if tabNum == 3:
+                        closeTabUnit()
+                
                 UnitTreeView.bind("<Button-3>", deselectUnitClick)
                 UnitTreeView.bind("<Double-Button-1>", selectUnitClick)
                 UnitTreeView.bind("<Return>", updateUnitReturn)
                 UnitTreeView.bind("<Delete>", deleteUnitDel)
                 UnitTreeView.bind("<Control-d>", setDeleteUnit)
+                UnitTreeView.bind("<Escape>", closeUnitTabEsc)
+                
+                
                 
                 def checkAssemTotal():
                     machRef = machName
@@ -3036,7 +3095,7 @@ if Login.AUTH:
                             return round(totalSGDVal, 2)
 
                     DLst = ["", "D"]
-    
+                    
                     PartNum = str(PartNumBox.get()).rjust(3,"0")
                     Description = DescriptionBox.get().upper()
                     D = DLst[DBox.current()]
@@ -3069,31 +3128,55 @@ if Login.AUTH:
                               TotalUnitCost, Currency, ExchangeRate, 
                               TotalSGD, selected)
                     
-                    respUpdateUnit = messagebox.askokcancel("Confirmation", "Confirm Update")
-                    if respUpdateUnit == True:
-                        curLoad = connLoad.cursor()
-                        curLoad.execute(sqlCommand, inputs)
-                        connLoad.commit()
-                        curLoad.close()
-                        
-                        clearEntryUnit()
-                        UnitTreeView.delete(*UnitTreeView.get_children())
-                        queryTreeUnit()
-                        
-                        checkAssemTotal()
-                        checkMachTotal()
-                        checkProTotal()
-                        
-                        messagebox.showinfo("Update Successful", 
-                                            f"You Have Updated Part {PartNum}", parent=frameUnit) 
+                    updateUnitFormat = True
+                    try:
+                        int(PartNum)
+                    except:
+                        updateUnitFormat = False
+                    
+                    if updateUnitFormat == False:
+                        messagebox.showerror("Unable to Update",
+                                             "Please Key in an Integer",
+                                             parent=frameUnit)
+                    
                     else:
-                        pass
+                        respUpdateUnit = messagebox.askokcancel("Confirmation", "Confirm Update")
+                        if respUpdateUnit == True:
+                            curLoad = connLoad.cursor()
+                            curLoad.execute(sqlCommand, inputs)
+                            connLoad.commit()
+                            curLoad.close()
+                            
+                            clearEntryUnit()
+                            UnitTreeView.delete(*UnitTreeView.get_children())
+                            queryTreeUnit()
+                            
+                            checkAssemTotal()
+                            checkMachTotal()
+                            checkProTotal()
+                            
+                            messagebox.showinfo("Update Successful", 
+                                                f"You Have Updated Part {PartNum}", parent=frameUnit) 
+                        else:
+                            pass
                     
                 def createUnit():
                     assemRef = assemFullName
+                    
+                    createUnitFormat = True
+                    try:
+                        int(PartNumBox.get())
+                    except:
+                        createUnitFormat = False
+                    
                     if PartNumBox.get() == "":
                         messagebox.showerror("Unable to Create Unit",
                                              "Please Key In a Part Number",
+                                             parent=frameUnit)
+                        
+                    elif createUnitFormat == False:
+                        messagebox.showerror("Incorrect Part Number Format",
+                                             "Please Key in an Integer",
                                              parent=frameUnit)
                     
                     else:
@@ -3272,7 +3355,7 @@ if Login.AUTH:
                         
                         VendorBox.config(state="normal")
                         VendorBox.delete(0, END)
-                        VendorBox.insert(0, resultSelect[0][17] if resultSelect[0][17] else '' )
+                        VendorBox.insert(0, resultSelect[0][17] if resultSelect[0][17] else "")
                         VendorBox.config(state="readonly")
                         
                         if resultSelect[0][18] == None:
@@ -3716,7 +3799,7 @@ if Login.AUTH:
                         
                         fullLst = []
                         for i in range(len(result)):
-                            singleLst = [threeDigitConverter(result[i][1]), 
+                            singleLst = [f"{unitFull}-{threeDigitConverter(result[i][1])}", 
                                          result[i][2], result[i][3], result[i][4],
                                          result[i][5], result[i][6], result[i][7],
                                          result[i][8], result[i][9], result[i][10],
@@ -4164,7 +4247,7 @@ if Login.AUTH:
             CompletedLabel.grid(row=2, column=9, padx=10, pady=2, sticky=E)
             EstCostAssemLabel.grid(row=3, column=9, padx=10, pady=2, sticky=E)
     
-    
+
     
             TypeBox = ttk.Combobox(AssemDataFrame, width=15, 
                                    value=["Mechanical", "Electrical", "Pneumatic"], 

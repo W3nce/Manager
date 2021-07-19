@@ -11,6 +11,7 @@ import csv
 import re 
 from fpdf import FPDF
 import ConnConfig
+import Login
 
 #additional modules
 from xerogui.app import *
@@ -24,10 +25,10 @@ import requests
 import CountryRef
 import os
 
-
+# Login.AUTHLVL
 
 logininfo = (ConnConfig.host,ConnConfig.username,ConnConfig.password)
-RetrieveToken()
+#RetrieveToken()
 
 def openPurchase():
     RepWin = Toplevel()
@@ -62,7 +63,11 @@ def openPurchase():
                      `VendorRemark` VARCHAR(100),
                      `TransCcy` VARCHAR(10),
                      `TransExRate` FLOAT,
-                     `DateEntry` DATETIME NOT NULL)
+                     `ProgressStat` INT DEFAULT 0,
+                     `ApproveStat` INT DEFAULT 0,
+                     `IssueStat` INT DEFAULT 0,
+                     `OrderStat` INT DEFAULT 0,
+                     `TotalSGD` FLOAT)
                     
                     ENGINE = InnoDB
                     DEFAULT CHARACTER SET = utf8mb4
@@ -76,14 +81,15 @@ def openPurchase():
                     CREATE TABLE IF NOT EXISTS `COMPANY_INFO`.`COMPANY_MWA`
                     (`oid` INT AUTO_INCREMENT PRIMARY KEY,
                      `ComName` VARCHAR(100),
-                     `ComRegNum` VARCHAR(30),
-                     `GSTRegNum` VARCHAR(30),
                      `Address` VARCHAR(100),
+                     `CenterA` VARCHAR(80),
+                     `CenterB` VARCHAR(80),
+                     `Building` VARCHAR(80),
                      `PosCode` VARCHAR(50),
-                     `CenterA` VARCHAR(50),
-                     `CenterB` VARCHAR(50),
-                     `ContactNum` VARCHAR(20),
-                     `Email` VARCHAR(50))
+                     `ComRegNum` VARCHAR(30),
+                     `Buyer` VARCHAR(100),
+                     `ContactNum` VARCHAR(30),
+                     `Email` VARCHAR(100))
                     
                     ENGINE = InnoDB
                     DEFAULT CHARACTER SET = utf8mb4
@@ -165,24 +171,27 @@ def openPurchase():
                                 "OrderDate", 
                                 "VendorRemark",
                                 "TransCcy",
-                                "DateEntry")
+                                "OrderStatus",
+                                "TotalSGD")
     
     OrderTreeView.column("#0", anchor = CENTER, width =80, minwidth = 0)
     # OrderTreeView.column("#0",  width=0, stretch=NO)
-    OrderTreeView.column("PurOrderNum", anchor = CENTER, width = 200, minwidth = 50)
-    OrderTreeView.column("PaymentTerm", anchor = CENTER, width= 150, minwidth = 50)
-    OrderTreeView.column("OrderDate", anchor = CENTER, width = 150, minwidth = 50)
-    OrderTreeView.column("VendorRemark", anchor = W, width = 400, minwidth = 50)
-    OrderTreeView.column("TransCcy", anchor = CENTER, width = 70, minwidth = 50)
-    OrderTreeView.column("DateEntry", anchor = CENTER, width = 150, minwidth = 50)
+    OrderTreeView.column("PurOrderNum", anchor = CENTER, width = 130, minwidth = 50)
+    OrderTreeView.column("PaymentTerm", anchor = CENTER, width= 100, minwidth = 50)
+    OrderTreeView.column("OrderDate", anchor = CENTER, width = 100, minwidth = 50)
+    OrderTreeView.column("VendorRemark", anchor = W, width = 370, minwidth = 50)
+    OrderTreeView.column("TransCcy", anchor = CENTER, width = 100, minwidth = 50)
+    OrderTreeView.column("OrderStatus", anchor = CENTER, width = 200, minwidth = 50)
+    OrderTreeView.column("TotalSGD", anchor = CENTER, width = 120, minwidth = 50)
     
     OrderTreeView.heading("#0", text = "Index")
-    OrderTreeView.heading("PurOrderNum", text = "Purchase Order Number")
+    OrderTreeView.heading("PurOrderNum", text = "Purchase Order No.")
     OrderTreeView.heading("PaymentTerm", text = "Payment Term")
     OrderTreeView.heading("OrderDate", text = "Order Date")
-    OrderTreeView.heading("TransCcy", text = "Trans. Ccy")
     OrderTreeView.heading("VendorRemark", text = "Vendor Remark")
-    OrderTreeView.heading("DateEntry", text = "Date of Entry")
+    OrderTreeView.heading("TransCcy", text = "Trans. Ccy")
+    OrderTreeView.heading("OrderStatus", text = "Status")
+    OrderTreeView.heading("TotalSGD", text = "Total SGD")
 
 
 
@@ -273,7 +282,7 @@ def openPurchase():
         payLstBox.pack(ipady=20)
         
         payMethodLst = ["COD", "EOM", "CND", "CBS", "CIA", "CWO",
-                        "Net 7", "Net 10", "Net 30", "Net 60", "Net 90", 
+                        "NET 7", "NET 10", "NET 30", "NET 60", "NET 90", 
                         "Others (Please Specify)"]
         
         for method in payMethodLst:
@@ -498,6 +507,8 @@ def openPurchase():
                                   text=mtStr, values=("",))
 
         for rec in recLst:
+            boolLst = ["In Progress", "Awaiting Approval", 
+                       "Awaiting Issue", "Issued", "Rejected"]
             curVend.execute(f"SELECT * FROM VENDOR_LIST WHERE VENDOR_NAME = '{rec[4]}'")
             vendorInfo = curVend.fetchall()
             if vendorInfo == []:
@@ -506,7 +517,8 @@ def openPurchase():
                 addressFull = f"{vendorInfo[0][3]} ({vendorInfo[0][2]}) {vendorInfo[0][6]} {vendorInfo[0][5]} {vendorInfo[0][7]} {vendorInfo[0][4]}"
             OrderTreeView.insert(parent=f"M{rec[1][5:9]}", index=END, iid=rec[0], text="", 
                                   values=(rec[1], rec[2], rec[3], addressFull, rec[5],
-                                          rec[7]))
+                                          boolLst[rec[10]], 
+                                          f"{rec[11]} SGD"))
         curVend.close()
         
     def updateOrderCcy():
@@ -551,7 +563,11 @@ def openPurchase():
         `OrderDate` = %s,
         `VendorRemark` = %s,
         `TransCcy` = %s,
-        `TransExRate` = %s
+        `TransExRate` = %s,
+        `ProgressStat` = %s,
+        `ApproveStat` = %s,
+        `IssueStat` = %s,
+        `OrderStat` = %s
         
         WHERE `oid` = %s"""
         
@@ -564,9 +580,27 @@ def openPurchase():
             else:
                 return dateVar.get()
         
+        ProgressStat = ProgressStatBox.current()
+        ApproveStat = ApproveStatBox.current()
+        IssueStat = IssueStatBox.current()
+        
+        if ApproveStat == 2:
+            OrderStat = 4
+        else:
+            if ProgressStat == 0:
+                OrderStat = 0
+            else:
+                if ApproveStat == 0:
+                    OrderStat = 1
+                else:
+                    if IssueStat == 0:
+                        OrderStat = 2
+                    else:
+                        OrderStat = 3
+        
         inputs = (PaymentTermBox.get(), checkDateOrder(OrderDateBox),
                   VendorRemarkBox.get(), TransCcyBox.get(), TransExRateBox.get(),
-                  selected)
+                  ProgressStat, ApproveStat, IssueStat, OrderStat, selected)
         
         respUpdateOrder = messagebox.askokcancel("Confirmation",
                                                  "Update This Order?",
@@ -590,24 +624,53 @@ def openPurchase():
             pass
     
     def createOrderCom():
-        timeNow = datetime.now()
-        formatDate = timeNow.strftime('%Y-%m-%d %H:%M:%S')
+        # timeNow = datetime.now()
+        # formatDate = timeNow.strftime("%Y-%m-%d")
+        
+        # OrderStat 
+        # 0 In Progress
+        # 1 Awaiting Approval
+        # 2 Awaiting Issue
+        # 3 Issued
+        # 4 Rejected
         
         createComOrder = f"""INSERT INTO `PUR_ORDER_LIST` (
-        PurOrderNum, PaymentTerm, OrderDate, VendorRemark, TransCcy, TransExRate, DateEntry)
+        PurOrderNum, PaymentTerm, OrderDate, VendorRemark, TransCcy, 
+        TransExRate, ProgressStat, ApproveStat, IssueStat, OrderStat)
         
-        VALUES (%s, %s, %s, %s, %s, %s, %s)"""
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
         
         def checkDateOrder(dateVar):
             if dateVar.get() == "":
-                return None
+                return Noneu
             else:
                 return dateVar.get()
+        
+        ProgressStat = ProgressStatBox.current()
+        ApproveStat = ApproveStatBox.current()
+        IssueStat = IssueStatBox.current()
+        
+        if ApproveStat == 2:
+            OrderStat = 4
+        else:
+            if ProgressStat == 0:
+                OrderStat = 0
+            else:
+                if ApproveStat == 0:
+                    OrderStat = 1
+                else:
+                    if IssueStat == 0:
+                        OrderStat = 2
+                    else:
+                        OrderStat = 3
         
         valueOrder = (PurOrderNumBox.get(), PaymentTermBox.get(), 
                       checkDateOrder(OrderDateBox),
                       VendorRemarkBox.get(), TransCcyBox.get(),
-                      TransExRateBox.get(), formatDate)
+                      TransExRateBox.get(), ProgressStat, ApproveStat, 
+                      IssueStat, OrderStat)
+        
+        
         
         curPur = connPur.cursor()
         curPur.execute(createComOrder, valueOrder)
@@ -816,10 +879,25 @@ def openPurchase():
             TransExRateBox.delete(0, END)
             TransExRateBox.insert(0, recLst[0][6])
             TransExRateBox.config(state="readonly")
-        
-        
             
+            ProgressStatBox.current(recLst[0][7])
+            ApproveStatBox.current(recLst[0][8])
+            IssueStatBox.current(recLst[0][9])
             
+            boolDic = {0:"In Progress", 1:"Awaiting Approval", 
+                       2:"Awaiting Issue", 3:"Issued", 4:"Rejected"}
+            
+            OrderStatBox.config(state="normal")
+            OrderStatBox.delete(0, END)
+            OrderStatBox.insert(0, boolDic.get(recLst[0][10]))
+            OrderStatBox.config(state="readonly")
+            
+            TotalSGDBox.config(state="normal")
+            TotalSGDBox.delete(0, END)
+            TotalSGDBox.insert(0, recLst[0][11])
+            TotalSGDBox.config(state="readonly")
+
+
             
             buttonUpdatePur.config(state=NORMAL)
             buttonCreatePur.config(state=DISABLED)
@@ -917,6 +995,19 @@ def openPurchase():
         VendorRemarkBox.config(state="normal")
         VendorRemarkBox.delete(0, END)
         VendorRemarkBox.config(state="readonly")
+        
+        ProgressStatBox.current(0)
+        ApproveStatBox.current(0)
+        IssueStatBox.current(0)
+
+        OrderStatBox.config(state="normal")
+        OrderStatBox.delete(0, END)
+        OrderStatBox.config(state="readonly")
+        
+        TotalSGDBox.config(state="normal")
+        TotalSGDBox.delete(0, END)
+        TotalSGDBox.config(state="readonly")
+        
         OrderTreeView.config(selectmode="browse")
     
     def refreshOrder():
@@ -958,6 +1049,7 @@ def openPurchase():
         PurOrderNumRef = purSelect[0][1]
         VendorRef = purSelect[0][4]
         TransCcyUsed = purSelect[0][5]
+        loadOrderSelect = OrderTreeView.selection()[0]
         
         framePur = Frame(tabNoteRep)
         tabNoteRep.add(framePur, text="Select Unit for Purchase Order")
@@ -1192,29 +1284,9 @@ def openPurchase():
                 SelectTreeView.insert(parent="", index=END, iid=rec[0], 
                                       values=(rec[1], rec[2], rec[3], rec[4], 
                                               rec[5], f"{rec[6]} %", rec[7], 
-                                              f"{rec[8]} {rec[9]}", 
+                                              checkCurrencyNonePur(rec[8], rec[9]),
                                               f"{rec[10]} SGD", 
                                               f"{rec[11]} {TransCcyVal}"))
-                
-            # if recLst == []:
-            #     TaxBox.config(state="normal")
-            #     TaxBox.delete(0, END)
-            #     TaxBox.insert(0, "NIL")
-            #     CurrencyBox.config(state="normal")
-            #     CurrencyBox.delete(0, END)
-            #     CurrencyBox.insert(0, "NIL")
-            #     CurrencyBox.config(state="readonly")
-            
-            # else:
-            #     TaxBox.config(state="normal")
-            #     TaxBox.delete(0, END)
-            #     TaxBox.insert(0, recLst[0][6])
-            #     CurrencyBox.config(state="normal")
-            #     CurrencyBox.delete(0, END)
-            #     CurrencyBox.insert(0, recLst[0][9])
-            #     CurrencyBox.config(state="readonly")
-                
-
         
         def CcyToSGD(Cost, Ccy):
             if Ccy == "SGD":
@@ -1225,7 +1297,7 @@ def openPurchase():
                 ExRate = 0.00
             
             if Cost == None or Cost == "" or Cost == "None":
-                return None
+                return 0.00
             else:
                 costVal = float(Cost)
                 return round(costVal * ExRate, 2)
@@ -1239,10 +1311,72 @@ def openPurchase():
                 ExRate = 0.00
             
             if Cost == None or Cost == "" or Cost == "None":
-                return None
+                return 0.00
             else:
                 costVal = float(Cost)
                 return round(costVal * ExRate, 2)
+        
+        def checkCostPur(cost):
+            if cost == "" or cost == "None" or cost == None:
+                return None
+            else:
+                return float(cost)
+        
+        def checkCurrencyNonePur(num, ccy):
+            if num == None or num == "" or num == "None":
+                return num
+            else:
+                numCurrency = f"{num} {ccy}"
+                return numCurrency
+
+
+        
+        def checkOrderTotal():
+            curPur = connPur.cursor()
+            curPur.execute(f"SELECT * FROM `{PurOrderNumRef}`")
+            recLst = curPur.fetchall()
+            
+            def checkInt(val):
+                try:
+                    float(val)
+                    return True
+                except:
+                    return False
+            
+            def sumSingleCost(Qty, Cost):
+                if checkInt(Qty) == False:
+                    Qty = 0
+                if checkInt(Cost) == False:
+                    Cost = 0.0
+                
+                singleCostTotal = float(Qty) * float(Cost)
+                return singleCostTotal
+            
+            
+            
+            costOrderLst = []
+            for unit in recLst:
+                costVal = sumSingleCost(unit[5], unit[10])
+                costOrderLst.append(costVal)
+            
+            sumCostOrder = sum(costOrderLst)
+            
+            sqlOrderCost = f"""UPDATE PUR_ORDER_LIST SET
+            `TotalSGD` = %s
+            
+            WHERE `oid` = %s"""
+            
+            inputs = (sumCostOrder, loadOrderSelect)
+            
+            curPur.execute(sqlOrderCost, inputs)
+            connPur.commit()
+            curPur.close()
+            
+            clearEntryOrder()
+            OrderTreeView.delete(*OrderTreeView.get_children())
+            queryTreeOrder()
+
+
         
         def selectUnitPur():
             selIndex = ValTreeView.selection()
@@ -1270,13 +1404,14 @@ def openPurchase():
                         TransVal = SGDToCcy(SGDVal, TransCcyUsed)
                         
                         valSelect = (formatUnitNum(rec[0]), rec[1], rec[5], rec[6], 
-                                     rec[10], "7", rec[15], rec[16], rec[17], 
-                                     SGDVal, TransVal)
+                                     rec[10], "7", rec[15], checkCostPur(rec[16]), 
+                                     rec[17], SGDVal, TransVal)
                         
                         curPur.execute(selectUnitCom, valSelect)
-                        connPur.commit()    
+                        connPur.commit()
                     curPur.close()
-                
+                    
+                    checkOrderTotal()
                     SelectTreeView.delete(*SelectTreeView.get_children())
                     queryTreeSelect()
                 else:
@@ -1299,6 +1434,8 @@ def openPurchase():
 
                     connPur.commit()
                     curPur.close() 
+                    
+                    checkOrderTotal()
                     SelectTreeView.delete(*SelectTreeView.get_children())
                     queryTreeSelect()
                 else:
@@ -1319,15 +1456,22 @@ def openPurchase():
         def clearUnitData():
             ReqQtyBox.delete(0, END)
             UnitCostSelectBox.delete(0, END)
+            TaxBox.config(state="normal")
             TaxBox.delete(0, END)
             TaxBox.insert(0, 0)
+            TaxBox.config(state="readonly")
             CurrencyBox.current(0)
+            SelectTreeView.config(selectmode="extended")
             
         def selectUnitData(e):
             selVal = SelectTreeView.selection()
             if selVal == ():
                 messagebox.showerror("Error",
                                      "Please Select a Part",
+                                     parent=framePur)
+            elif len(selVal) > 1:
+                messagebox.showerror("Error",
+                                     "Please Select ONLY ONE Part",
                                      parent=framePur)
             else:
                 selected = selVal[0]
@@ -1343,11 +1487,22 @@ def openPurchase():
                 CurrencyBox.config(state="readonly")
                 
                 ReqQtyBox.insert(0, unitVal[0][5])
-                UnitCostSelectBox.insert(0, unitVal[0][8])
+                
+                if unitVal[0][8] == None or unitVal[0][8] == "None":
+                    UnitCostSelectBox.insert(0, "")
+                else:
+                    UnitCostSelectBox.insert(0, unitVal[0][8])
+                
+                TaxBox.config(state="normal")
+                TaxBox.delete(0, END)
                 TaxBox.insert(0, unitVal[0][6])
+                TaxBox.config(state="readonly")
+                
                 CurrencyBox.config(state="normal")
                 CurrencyBox.insert(0, unitVal[0][9])
                 CurrencyBox.config(state="readonly")
+                
+                SelectTreeView.config(selectmode="none")
             
         def deselectUnitData(e):
             selected = SelectTreeView.selection()
@@ -1376,7 +1531,9 @@ def openPurchase():
             REQ = %s,
             UnitCost = %s,
             Tax = %s,
-            Currency = %s
+            Currency = %s,
+            CostSGD = %s,
+            CostTrans = %s
             
             WHERE oid = %s
             """
@@ -1389,8 +1546,12 @@ def openPurchase():
             else:
                 selected = selVal[0]
                 
-                inputs = (ReqQtyBox.get(), UnitCostSelectBox.get(), 
-                          TaxBox.get(), CurrencyBox.get(), selected)
+                newTotalSGD = CcyToSGD(UnitCostSelectBox.get(), CurrencyBox.get())
+                newTotalCcy = SGDToCcy(newTotalSGD, TransCcyUsed)
+                
+                inputs = (ReqQtyBox.get(), checkCostPur(UnitCostSelectBox.get()), 
+                          TaxBox.get(), CurrencyBox.get(), 
+                          newTotalSGD, newTotalCcy, selected)
                 
                 response = messagebox.askokcancel("Confirmation", "Confirm Update", parent=RepWin)
                 if response == True:
@@ -1400,6 +1561,8 @@ def openPurchase():
                     curPur.close()
     
                     clearUnitData()
+                    
+                    checkOrderTotal()
                     SelectTreeView.delete(*SelectTreeView.get_children())
                     queryTreeSelect()
                     
@@ -1411,248 +1574,256 @@ def openPurchase():
         def updateUnitDataClick(e):
             updateUnitData()
 
-        # def defaultCommon():
-        #     curPur = connPur.cursor()
-        #     curPur.execute(f"SELECT * FROM `{PurOrderNumRef}`")
-        #     recLst = curPur.fetchall()
-        #     connPur.commit()
-        #     curPur.close() 
+
+
+
+
+
+
+
+
+
+
+        def genPurOrder():
+            curCom = connCom.cursor()
+            curCom.execute("SELECT * FROM COMPANY_MWA")
+            companyInfo = curCom.fetchall()
             
-        #     TaxBox.config(state="normal")
-        #     TaxBox.delete(0, END)
-        #     TaxBox.insert(0, recLst[0][6])
-        #     CurrencyBox.config(state="normal")
-        #     CurrencyBox.delete(0, END)
-        #     CurrencyBox.insert(0, recLst[0][9])
-        #     CurrencyBox.config(state="readonly")
+            curPur = connPur.cursor() 
+            curPur.execute(f"SELECT * FROM PUR_ORDER_LIST WHERE PurOrderNum = '{PurOrderNumRef}'")
+            purOrderInfo = curPur.fetchall()
+            
+            curPur.execute(f"SELECT * FROM `{PurOrderNumRef}`")
+            purOrderUnit = curPur.fetchall()
+            
+            curVend = connVend.cursor()
+            curVend.execute(f"SELECT * FROM VENDOR_LIST WHERE VENDOR_NAME = '{VendorRef}'")
+            vendorInfo = curVend.fetchall()
+            
+            curPur.close()
+            curVend.close()
+            
+            
+
+
+            
+            def totalCostCalc(Qty, OneCost):
+                QtyNum = float(Qty) if Qty else 0
+                OneCostNum = float(OneCost) if OneCost else 0
+                total = QtyNum * OneCostNum
+                totalDigit = str("{:.2f}".format(total))
+                return totalDigit
+            
+            unitDataLst = [["", "Part No.", "Description", "Quantity", 
+                            "Tax", "Unit Cost", "Total Cost"]]
+            for i in range(0, len(purOrderUnit)):
+                unitDataLst.append([f"{str(i+1)}.", purOrderUnit[i][1], 
+                                    f"{purOrderUnit[i][2]}, {purOrderUnit[i][4]}", 
+                                    purOrderUnit[i][5], f"{purOrderUnit[i][6]}%", 
+                                    str("{:.2f}".format(float(purOrderUnit[i][11]) if purOrderUnit[i][11] else 0)) + " " + str(TransCcyUsed), 
+                                    str(totalCostCalc(purOrderUnit[i][5], purOrderUnit[i][11])) + " " + str(TransCcyUsed)])
+            
+            class PurOrder(FPDF):
+                def footer(self):
+                    self.set_y(-15) # 15 mm above from bottom
+                    self.set_font("Arial", "I", 10) # 10 Font Size
+                    self.cell(0, 10, f"Page {self.page_no()} / {{nb}}", align="C")
+                
+                def companyDetail(self):
+                    self.image("MWA.jpg", x=98, y=8, h=30)
+                    self.ln(35)
+                    
+                    self.set_font("Arial", "", 18)
+                    self.cell(w=90, h=9, txt = "PURCHASE ORDER", align="L")
+                    self.set_font("Arial", "B", 8)
+                    self.cell(w=50, h=3, txt = "Purchase Order Date", align="L")
+                    self.set_font("Arial", "", 8)
+                    self.cell(w=50, h=3, txt = f"{companyInfo[0][1]}", align="L", ln=True)
+                    
+                    self.cell(w=90, h=3, txt = "", align="L")
+                    self.cell(w=50, h=3, txt = f"{purOrderInfo[0][3]}", align="L")
+                    self.cell(w=50, h=3, txt = f"{companyInfo[0][2]}", align="L", ln=True)
+                    
+                    self.cell(w=90, h=3, txt = "", align="L")
+                    self.cell(w=50, h=3, txt = "", align="L")
+                    self.cell(w=50, h=3, txt = f"{companyInfo[0][3]}", align="L", ln=True)
+                    
+                    self.cell(w=90, h=3, txt = f"{vendorInfo[0][3]}", align="L")
+                    self.set_font("Arial", "B", 8)
+                    self.cell(w=50, h=3, txt = "Purchase Order Number", align="L")
+                    self.set_font("Arial", "", 8)
+                    self.cell(w=50, h=3, txt = f"{companyInfo[0][4]}", align="L", ln=True)
+                    
+                    self.cell(w=90, h=3, txt = f"{vendorInfo[0][8]}", align="L")
+                    self.cell(w=50, h=3, txt = f"{purOrderInfo[0][1]}", align="L")
+                    self.cell(w=50, h=3, txt = f"{companyInfo[0][5]}", align="L", ln=True)
+                    
+                    self.cell(w=90, h=3, txt = f"{vendorInfo[0][9]}", align="L")
+                    self.cell(w=50, h=3, txt = "", align="L")
+                    self.cell(w=50, h=3, txt = f"{companyInfo[0][6]}", align="L", ln=True)
+                    
+                    if vendorInfo[0][4] == "Singapore":
+                        self.cell(w=90, h=3, txt = f"Singapore {vendorInfo[0][7]}", align="L")
+                    else:
+                        self.cell(w=90, h=3, txt = f"{vendorInfo[0][7]} {vendorInfo[0][6]}, {vendorInfo[0][5]}, {vendorInfo[0][4]} ", align="L")
+                    self.set_font("Arial", "B", 8)
+                    self.cell(w=50, h=3, txt = "Payment Terms", align="L")
+                    self.set_font("Arial", "", 8)
+                    self.cell(w=50, h=3, txt = f"Co. Reg No.: {companyInfo[0][7]}", align="L", ln=True)
+                    
+                    if vendorInfo[0][14] == "":
+                        self.cell(w=90, h=3, txt = f"Attn: {vendorInfo[0][11]}", align="L")
+                    else:
+                        self.cell(w=90, h=3, txt = f"Attn: {vendorInfo[0][11]} / {vendorInfo[0][14]}", align="L")
+                    
+                    self.cell(w=50, h=3, txt = f"{purOrderInfo[0][2]}", align="L")
+                    self.cell(w=50, h=3, txt = f"Buyer: {companyInfo[0][8]}", align="L", ln=True)
+                    
+                    if vendorInfo[0][12] == "" and vendorInfo[0][15] == "":
+                        self.cell(w=90, h=3, txt = "", align="L")
+                    elif vendorInfo[0][12] != "" and vendorInfo[0][15] == "":
+                        self.cell(w=90, h=3, txt = f"Tel: {vendorInfo[0][12]}", align="L")
+                    else:
+                        self.cell(w=90, h=3, txt = f"Tel: {vendorInfo[0][12]} / {vendorInfo[0][15]}", align="L")
+                    self.cell(w=50, h=3, txt = "", align="L")
+                    self.cell(w=50, h=3, txt = f"Contact Number: {companyInfo[0][9]}", align="L", ln=True)
+                    
+                    if vendorInfo[0][13] == "" and vendorInfo[0][16] == "":
+                        self.cell(w=90, h=3, txt = "", align="L")
+                    elif vendorInfo[0][13] != "" and vendorInfo[0][16] == "":
+                        self.cell(w=90, h=3, txt = f"Email: {vendorInfo[0][13]}", align="L")
+                    else:
+                        self.cell(w=90, h=3, txt = f"Email: {vendorInfo[0][13]} / {vendorInfo[0][16]}", align="L")
+                    self.cell(w=50, h=3, txt = "", align="L")
+                    self.cell(w=50, h=3, txt = f"Email: {companyInfo[0][10]}", align="L", ln=True)
+                    
+                    self.ln(10)
+                
+                def columnWidth(self, lstRef): # Get the Maximum Width of Each Column  
+                    pageWidthMargin = self.w - 20
+                    fontSize = 10
+                    while True:
+                        self.set_font("Arial", "", fontSize)
+                        colLenLst = []
+                        for i in range(len(lstRef[0])): # Select Rows 1 2 3
+                            strLenLst = []
+                            for j in range(len(lstRef)): # Select Columns 1 2 3
+                                val = lstRef[j][i]
+                                strLen = self.get_string_width(val) + 5
+                                strLenLst.append(strLen)
+                            colLenLst.append(max(strLenLst))
+                        if sum(colLenLst) <= pageWidthMargin:
+                            break
+                        else:
+                            fontSize = fontSize - 0.5
+                    return colLenLst
+                
+                def printHeading(self, lst):
+                    self.set_fill_color(200, 220, 255)
+                    for i in range(len(lst[0])):
+                        strWidth = self.columnWidth(lst)[i]
+                        self.cell(strWidth, 5, lst[0][i], border=True, ln=False, fill=True, align="C")
+                
+                def printContent(self, lst):
+                    for i in range(1, len(lst)):
+                        self.ln()
+                        for j in range(len(lst[0])):
+                            strWidth = self.columnWidth(lst)[j]
+                            self.cell(strWidth, 5, lst[i][j], border=True)
+                    self.ln(10)
+                    
+                def printTotal(self, lst):
+                    costLst = []
+                    GSTLst = []
+                    for i in range(1, len(lst)):
+                        val = float(re.sub("[^0-9^.]", "", lst[i][6]))
+                        GSTVal = float(str(lst[i][4]).strip("%"))/100
+                        GSTCost = val * GSTVal
+                        
+                        costLst.append(val)
+                        GSTLst.append(GSTCost)
+                        
+                    subTotal = sum(costLst)
+                    GSTTotal = sum(GSTLst)
+                    totalSGD = subTotal + GSTTotal
+                    
+                    subTotalStr = str("{:.2f}".format(subTotal)) + " " + str(TransCcyUsed)
+                    GSTStr = str("{:.2f}".format(GSTTotal)) + " " + str(TransCcyUsed)
+                    totalStr = str("{:.2f}".format(totalSGD)) + " " + str(TransCcyUsed)
+                    
+                    self.set_font("Arial", "", 10)
+                    self.cell(w=155, h=5, txt="Subtotal", align="R")
+                    self.cell(w=30, h=5, txt=f"{subTotalStr}", align="R", ln=True)
+                    self.cell(w=155, h=5, txt="Tax", align="R")
+                    self.cell(w=30, h=5, txt=f"{GSTStr}", align="R", ln=True)
+                    self.cell(w=155, h=5, txt="Total", align="R")
+                    self.cell(w=30, h=5, txt=f"{totalStr}", align="R", ln=True)
+                    
+                def printNotes(self):
+                    self.set_font("Arial", "", 8)
+                    self.cell(w=0, h=5, txt="NOTES:", ln=True, align="L")
+                    self.cell(w=0, h=5, txt="1. Please acknowledge receipt & delivery date on our P.O. by chop & sign and email it back to us immediately.",
+                              ln=True, align="L")
+                    self.cell(w=0, h=5, txt="2. Purchase Order Number must indicate on all the delivery orders and invoices",
+                              ln=True, align="L")
+                    
+                    self.ln(30)
+                    
+                    self.cell(w=100, h=5, txt="________________________________________", align="L")
+                    self.cell(w=100, h=5, txt="______________________________", ln=True, align="L")
+                    self.cell(w=100, h=5, txt="SUPPLIER hereby confirm acceptance of this Order", 
+                              align="L")
+                    self.cell(w=100, h=5, txt="MOTIONWELL Automation Pte. Ltd.",
+                              ln=True, align="L")
+                    
+                    self.cell(w=100, h=5, txt="Name, Designation, Signature and Date", 
+                              align="L")
+                    self.cell(w=100, h=5, txt="Authorized Signature and Date",
+                              ln=True, align="L")
         
-        # def updateCommon():
-        #     sqlComTax = f"""UPDATE `{PurOrderNumRef}` SET
-        #     Tax = %s,
-        #     Currency = %s
-        #     """
-
-        #     inputs = (TaxBox.get(), CurrencyBox.get())
+            PurOrderGen = PurOrder("P", "mm", "A4")
+            PurOrderGen.set_auto_page_break(auto=True, margin=15)
+            PurOrderGen.add_page()
             
-        #     response = messagebox.askokcancel("Confirm Update", "This will Update ALL ROWS", parent=RepWin)
-        #     if response == True:
-        #         curPur = connPur.cursor()
-        #         curPur.execute(sqlComTax, inputs)
-        #         connPur.commit()
-        #         curPur.close()
-
-        #         clearUnitData()
-        #         SelectTreeView.delete(*SelectTreeView.get_children())
-        #         queryTreeSelect()
-                
-        #         messagebox.showinfo("Update Successful", 
-        #                             f"You Have Updated Tax and Currency", parent=RepWin) 
-        #     else:
-        #         pass
-
-
-
-
-
-
-
-
-
-
-        # def genPurOrder():
-        #     curCom = connCom.cursor()
-        #     curCom.execute("SELECT * FROM COMPANY_MWA")
-        #     companyInfo = curCom.fetchall()
+            PurOrderGen.companyDetail()
+            PurOrderGen.printHeading(unitDataLst)
+            PurOrderGen.printContent(unitDataLst)
             
-        #     curPur = connPur.cursor() 
-        #     curPur.execute(f"SELECT * FROM PUR_ORDER_LIST WHERE PurOrderNum = '{PurOrderNumRef}'")
-        #     purOrderInfo = curPur.fetchall()
+            if PurOrderGen.get_y() >= 268:
+                PurOrderGen.add_page()
             
-        #     curPur.execute(f"SELECT * FROM `{PurOrderNumRef}`")
-        #     purOrderUnit = curPur.fetchall()
+            PurOrderGen.printTotal(unitDataLst)
+            PurOrderGen.ln(20)
             
-        #     curVend = connVend.cursor()
-        #     curVend.execute(f"SELECT * FROM VENDOR_LIST WHERE VENDOR_NAME = '{VendorRef}'")
-        #     vendorInfo = curVend.fetchall()
+            if PurOrderGen.get_y() >= 218:
+                PurOrderGen.add_page()
             
-        #     curPur.close()
-        #     curVend.close()
+            PurOrderGen.printNotes()
             
+            PurOrderGen.output(f"{PurOrderNumRef}.pdf")
             
-            
-            
-            
-            
-            
-            
-            
-            
-            # NOT APPLICABLE
-            
-            # def totalCostCalc(Qty, OneCost):
-            #     QtyNum = float(Qty) if Qty else 0
-            #     OneCostNum = float(OneCost) if OneCost else 0
-            #     total = QtyNum * OneCostNum
-            #     totalDigit = str("{:.2f}".format(total))
-            #     return totalDigit
-            
-            # unitDataLst = [["Index", "Part No.", "Description", "Maker Spec", "Quantity", 
-            #                 "Tax", "Unit Cost", "Total Cost"]]
-            # for i in range(0, len(purOrderUnit)):
-            #     unitDataLst.append([str(i+1), purOrderUnit[i][1], purOrderUnit[i][2],
-            #                         purOrderUnit[i][4], purOrderUnit[i][5], 
-            #                         purOrderUnit[i][6], 
-            #                         str("{:.2f}".format(float(purOrderUnit[i][8]) if purOrderUnit[i][8] else 0)) + " " + str(purOrderUnit[0][9]), 
-            #                         str(totalCostCalc(purOrderUnit[i][5], purOrderUnit[i][8])) + " " + str(purOrderUnit[0][9])])
-            
-            # class PurOrder(FPDF):
-            #     def footer(self):
-            #         self.set_y(-15) # 15 mm above from bottom
-            #         self.set_font("Arial", "I", 10) # 10 Font Size
-            #         self.cell(0, 10, f"Page {self.page_no()} / {{nb}}", align="C")
-                
-            #     def companyDetail(self):
-            #         self.image("MWA.jpg", x=10, y=8, h=25)
-            #         self.set_font("Arial", "", 20)
-            #         self.cell(w=0, h=25, txt="PURCHASE ORDER", align="R", border=False, ln=True)
-                    
-            #         self.set_font("Arial", "", 8)
-            #         self.cell(w=60, h=3, txt=f"Company Reg. No: {companyInfo[0][2]}", align="L")
-            #         self.cell(w=50, h=3, txt="Purchase Order Date", align="R")
-            #         self.cell(w=0, h=3, txt="Vendor", align="R", ln=True)
-                    
-            #         self.cell(w=60, h=3, txt=f"GST Reg. No: {companyInfo[0][3]}", align="L")
-            #         self.cell(w=50, h=3, txt=f"{purOrderInfo[0][3]}", align="R") # Order Date
-            #         self.cell(w=0, h=3, txt=f"{vendorInfo[0][3]}", align="R", ln=True)
-                    
-            #         self.cell(w=60, h=3, txt=f"{companyInfo[0][1]}", align="L")
-            #         self.cell(w=50, h=3, txt="", align="R")
-            #         self.cell(w=0, h=3, txt=f"{vendorInfo[0][8]}", align="R", ln=True)
-                    
-            #         self.cell(w=60, h=3, txt=f"{companyInfo[0][4]} {companyInfo[0][5]}", align="L")
-            #         self.cell(w=50, h=3, txt="Purchase Order No.", align="R")
-            #         self.cell(w=0, h=3, txt=f"{vendorInfo[0][9]}", align="R", ln=True)
-                    
-            #         self.cell(w=60, h=3, txt=f"{companyInfo[0][6]}", align="L")
-            #         self.cell(w=50, h=3, txt=f"{purOrderInfo[0][1]}", align="R")
-            #         self.cell(w=0, h=3, 
-            #                   txt=f"{vendorInfo[0][6]} {vendorInfo[0][5]} Postal {vendorInfo[0][7]}", 
-            #                   align="R", ln=True)
-                    
-            #         self.cell(w=60, h=3, txt=f"{companyInfo[0][7]}", align="L")
-            #         self.cell(w=50, h=3, txt="", align="R")
-            #         self.cell(w=0, h=3, txt=f"{vendorInfo[0][4]}", align="R", ln=True)
-                    
-            #         self.cell(w=60, h=3, txt=f"Contact No.: {companyInfo[0][8]}", align="L")
-            #         self.cell(w=50, h=3, txt="Payment Terms", align="R")
-            #         self.cell(w=0, h=3, txt=f"POC: {vendorInfo[0][11]}", align="R", ln=True)
-                            
-            #         self.cell(w=60, h=3, txt=f"Email: {companyInfo[0][9]}", align="L")
-            #         self.cell(w=50, h=3, txt=f"{purOrderInfo[0][2]}", align="R")
-            #         self.cell(w=0, h=3, txt=f"Contact: {vendorInfo[0][12]}", align="R", ln=True)
-                    
-            #         self.cell(w=60, h=3, txt="", align="L")
-            #         self.cell(w=50, h=3, txt="", align="R")
-            #         self.cell(w=0, h=3, txt=f"{vendorInfo[0][13]}", align="R", ln=True)
-                    
-            #         self.ln(10)
-                
-            #     def columnWidth(self, lstRef): # Get the Maximum Width of Each Column  
-            #         pageWidthMargin = self.w - 20
-            #         fontSize = 10
-            #         while True:
-            #             self.set_font("Arial", "", fontSize)
-            #             colLenLst = []
-            #             for i in range(len(lstRef[0])): # Select Rows 1 2 3
-            #                 strLenLst = []
-            #                 for j in range(len(lstRef)): # Select Columns 1 2 3
-            #                     val = lstRef[j][i]
-            #                     strLen = self.get_string_width(val) + 5
-            #                     strLenLst.append(strLen)
-            #                 colLenLst.append(max(strLenLst))
-            #             if sum(colLenLst) <= pageWidthMargin:
-            #                 break
-            #             else:
-            #                 fontSize = fontSize - 0.5
-            #         return colLenLst
-                
-            #     def printHeading(self, lst):
-            #         self.set_fill_color(200, 220, 255)
-            #         for i in range(len(lst[0])):
-            #             strWidth = self.columnWidth(lst)[i]
-            #             self.cell(strWidth, 5, lst[0][i], border=True, ln=False, fill=True, align="C")
-                
-            #     def printContent(self, lst):
-            #         for i in range(1, len(lst)):
-            #             self.ln()
-            #             for j in range(len(lst[0])):
-            #                 strWidth = self.columnWidth(lst)[j]
-            #                 self.cell(strWidth, 5, lst[i][j], border=True)
-            #         self.ln(10)
-                    
-            #     def printTotal(self, lst):
-            #         costLst = []
-            #         for i in range(1, len(lst)):
-            #             val = re.sub("[^0-9^.]", "", lst[i][7])
-            #             costLst.append(float(val))
-            #         subTotal = sum(costLst)
-            #         GST = subTotal * float(str(purOrderUnit[0][6]).strip("%"))/100
-            #         totalSGD = subTotal + GST
-                    
-            #         subTotalStr = str("{:.2f}".format(subTotal)) + " " + str(purOrderUnit[0][9])
-            #         GSTStr = str("{:.2f}".format(GST)) + " " + str(purOrderUnit[0][9])
-            #         totalStr = str("{:.2f}".format(totalSGD)) + " " + str(purOrderUnit[0][9])
-                    
-            #         self.set_font("Arial", "", 10)
-            #         self.cell(w=185, h=5, txt=f"Subtotal   {subTotalStr}", align="R", ln=True)
-            #         self.cell(w=185, h=5, txt=f"GST   {GSTStr}", align="R", ln=True)
-            #         self.cell(w=185, h=5, txt=f"Total   {totalStr}", align="R", ln=True)
-                    
-            #     def printNotes(self):
-            #         self.set_font("Arial", "", 8)
-            #         self.cell(w=0, h=5, txt="NOTES:", ln=True, align="L")
-            #         self.cell(w=0, h=5, txt="1. Please acknowledge receipt & delivery date on our P.O. by chop & sign and email it back to us immediately.",
-            #                   ln=True, align="L")
-            #         self.cell(w=0, h=5, txt="2. Purchase Order Number must indicate on all the delivery orders and invoices",
-            #                   ln=True, align="L")
-                    
-            #         self.ln(30)
-                    
-            #         self.cell(w=100, h=5, txt="________________________________________", align="L")
-            #         self.cell(w=100, h=5, txt="______________________________", ln=True, align="L")
-            #         self.cell(w=100, h=5, txt="SUPPLIER hereby confirm acceptance of this Order", 
-            #                   align="L")
-            #         self.cell(w=100, h=5, txt="MOTIONWELL Automation Pte. Ltd.",
-            #                   ln=True, align="L")
-                    
-            #         self.cell(w=100, h=5, txt="Name, Designation, Signature and Date", 
-            #                   align="L")
-            #         self.cell(w=100, h=5, txt="Authorized Signature and Date",
-            #                   ln=True, align="L")
+            messagebox.showinfo("Create Successful", 
+                                f"You Have Generated PO {PurOrderNumRef}", parent=framePur) 
         
-            # PurOrderGen = PurOrder("P", "mm", "A4")
-            # PurOrderGen.set_auto_page_break(auto=True, margin=15)
-            # PurOrderGen.add_page()
-            
-            # PurOrderGen.companyDetail()
-            # PurOrderGen.printHeading(unitDataLst)
-            # PurOrderGen.printContent(unitDataLst)
-            
-            # if PurOrderGen.get_y() >= 268:
-            #     PurOrderGen.add_page()
-            
-            # PurOrderGen.printTotal(unitDataLst)
-            # PurOrderGen.ln(20)
-            
-            # if PurOrderGen.get_y() >= 218:
-            #     PurOrderGen.add_page()
-            
-            # PurOrderGen.printNotes()
-            
-            # PurOrderGen.output(f"{PurOrderNumRef}.pdf")
-            
-            # messagebox.showinfo("Create Successful", 
-            #                     f"You Have Generated PO {PurOrderNumRef}", parent=framePur) 
+
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
         
         
         
@@ -1969,22 +2140,22 @@ def openPurchase():
         buttonDeleteThis = Button(ButtonRepFrame, text="Delete Unit (Below)", command=deleteUnitPur)
         buttonDeleteThis.grid(row=0, column=1, padx=10, pady=5, sticky=W)
         
-        # buttonGenPur = Button(ButtonRepFrame, text="Generate Purchase Order", command=genPurOrder)
-        # buttonGenPur.grid(row=0, column=2, padx=10, pady=5, sticky=W)
+        buttonGenPur = Button(ButtonRepFrame, text="Generate Purchase Order", command=genPurOrder)
+        buttonGenPur.grid(row=0, column=3, padx=10, pady=5, sticky=W)
     
         buttonExportXero = Button(ButtonRepFrame, text="Export to Xero", command=ExportToXero)
-        buttonExportXero.grid(row=0, column=2, padx=10, pady=5, sticky=W)
+        buttonExportXero.grid(row=0, column=4, padx=10, pady=5, sticky=W)
     
         buttonClosePur = Button(ButtonRepFrame, text="Close Tab", command=closeTabPur)
-        buttonClosePur.grid(row=0, column=3, padx=10, pady=5, sticky=W)
+        buttonClosePur.grid(row=0, column=5, padx=10, pady=5, sticky=W)
         
         
         ReqQtyLabel = Label(DataRepFrame, text="Req Qty.")
-        ReqQtyBox = Entry(DataRepFrame, width=8)
+        ReqQtyBox = Spinbox(DataRepFrame, from_=0, to=100000, width=8)
         UnitCostSelectLabel = Label(DataRepFrame, text="Unit Cost")
-        UnitCostSelectBox = Entry(DataRepFrame, width=8)
+        UnitCostSelectBox = Spinbox(DataRepFrame, from_=0, to=100000, increment=0.01, width=8)
         
-       
+
         
         TaxLabel = Label(DataRepFrame, text="Tax")
         TaxBox = Spinbox(DataRepFrame, from_=0, to=100, width=5, state="readonly")
@@ -2133,6 +2304,11 @@ def openPurchase():
     VendorRemarkLabel = Label(OrderDataFrame, text="Vendor")
     TransCcyLabel = Label(OrderDataFrame, text="Transaction Currency")
     TransExRateLabel = Label(OrderDataFrame, text="Trans. Exchange Rate")
+    ProgressStatLabel = Label(OrderDataFrame, text="Completed")
+    ApproveStatLabel = Label(OrderDataFrame, text="Approved")
+    IssueStatLabel = Label(OrderDataFrame, text="Issued")
+    OrderStatLabel = Label(OrderDataFrame, text="Status")
+    TotalSGDLabel = Label(OrderDataFrame, text="Total Cost")
 
 
 
@@ -2151,13 +2327,25 @@ def openPurchase():
                                width=10, state="readonly")
     TransExRateBox = Entry(OrderDataFrame, width=12, state="readonly")
     TransSGDLabel = Label(OrderDataFrame, text="SGD")
+    
+    ProgressStatBox = ttk.Combobox(OrderDataFrame, value=["No", "Yes"],
+                                   width=10, state="readonly")
+    ApproveStatBox = ttk.Combobox(OrderDataFrame, value=["No", "Yes", "Reject"],
+                                  width=10, state="readonly")
+    IssueStatBox = ttk.Combobox(OrderDataFrame, value=["No", "Yes"],
+                                width=10, state="readonly")
+    OrderStatBox = Entry(OrderDataFrame, width=20, state="readonly")
+    TotalSGDBox = Entry(OrderDataFrame, width=12, state="readonly")
+    TotalSGDValLabel = Label(OrderDataFrame, text="SGD")
+    
+
 
     def getTransExRate(e):
         Ccy = TransCcyBox.get()
         if Ccy == "SGD":
             TransExRateBox.config(state="normal")
             TransExRateBox.delete(0, END)
-            TransExRateBox.insert(0, 1)
+            TransExRateBox.insert(0, 1.0)
             TransExRateBox.config(state="readonly")
         elif Ccy in CountryRef.getCcyLst():
             ExRate = CountryRef.getExRate(Ccy)
@@ -2168,7 +2356,7 @@ def openPurchase():
         else:
             TransExRateBox.config(state="normal")
             TransExRateBox.delete(0, END)
-            TransExRateBox.insert(0, 0)
+            TransExRateBox.insert(0, 0.0)
             TransExRateBox.config(state="readonly")
 
     TransCcyBox.bind("<<ComboboxSelected>>", getTransExRate)
@@ -2180,6 +2368,14 @@ def openPurchase():
     
     TransCcyLabel.grid(row=0, column=3, padx=10, pady=5, sticky=E)
     TransExRateLabel.grid(row=1, column=3, padx=10, pady=5, sticky=E)
+    
+    ProgressStatLabel.grid(row=0, column=6, padx=10, pady=5, sticky=E)
+    ApproveStatLabel.grid(row=1, column=6, padx=10, pady=5, sticky=E)
+    IssueStatLabel.grid(row=2, column=6, padx=10, pady=5, sticky=E)
+    OrderStatLabel.grid(row=3, column=6, padx=10, pady=5, sticky=E)
+    TotalSGDLabel.grid(row=2, column=3, padx=10, pady=5, sticky=E)
+
+
 
     PurOrderNumBox.grid(row=0, column=1, padx=10, pady=5, sticky=W)
     OrderNumGenButton.grid(row=0, column=2, padx=(0,10), pady=5, sticky=W)
@@ -2198,13 +2394,47 @@ def openPurchase():
     TransExRateBox.grid(row=1, column=4, padx=10, pady=5, sticky=W)
     TransSGDLabel.grid(row=1, column=5, padx=(0,10), pady=5, sticky=W)
     
+    ProgressStatBox.grid(row=0, column=7, padx=10, pady=5, sticky=W)
+    ApproveStatBox.grid(row=1, column=7, padx=10, pady=5, sticky=W)
+    IssueStatBox.grid(row=2, column=7, padx=10, pady=5, sticky=W)
+    OrderStatBox.grid(row=3, column=7, padx=10, pady=5, sticky=W)
+    
+    TotalSGDBox.grid(row=2, column=4, padx=10, pady=5, sticky=W)
+    TotalSGDValLabel.grid(row=2, column=5, padx=(0,10), pady=5, sticky=W)
+    
+    
     TransCcyBox.current(0)
     TransExRateBox.config(state="normal")
     TransExRateBox.delete(0, END)
-    TransExRateBox.insert(0, 1)
+    TransExRateBox.insert(0, 1.0)
     TransExRateBox.config(state="readonly")
+
+    ProgressStatBox.current(0)
+    ApproveStatBox.current(0)
+    IssueStatBox.current(0)
     
     
+    
+    def ProgressStatSelect(e):
+        ProgressVal = ProgressStatBox.current()
+        if ProgressVal == 0:
+            ApproveStatBox.current(0)
+            IssueStatBox.current(0)
+        else:
+            pass
+    
+    def ApproveStatSelect(e):
+        ApproveVal = ApproveStatBox.current()
+        if ApproveVal == 0:
+            IssueStatBox.current(0)
+        else:
+            pass
+    
+    ProgressStatBox.bind("<<ComboboxSelected>>", ProgressStatSelect)
+    ApproveStatBox.bind("<<ComboboxSelected>>", ApproveStatSelect)
+
+    
+
     
     
     buttonUpdatePur = Button(OrderButtonFrame, text="Update Order", command=updateOrder, state=DISABLED)
@@ -2237,7 +2467,7 @@ def openPurchase():
     def editCompanyInfo():
         comWin = Toplevel()
         comWin.title("Edit Company Information")
-        comWin.geometry("450x480")
+        comWin.geometry("450x500")
         comWin.columnconfigure(0, weight=1)
         comWin.rowconfigure(0, weight=1)
         
@@ -2250,44 +2480,48 @@ def openPurchase():
         # CompanyButtonFrame.pack(fill="x", expand="yes", padx=20)
 
         ComNameLabel = Label(CompanyDataFrame, text="Company Name")
-        ComRegNumLabel = Label(CompanyDataFrame, text="Company Reg No.")
-        GSTRegNumLabel = Label(CompanyDataFrame, text="GST Reg No.")
         AddressLabel = Label(CompanyDataFrame, text="Address")
-        PosCodeLabel = Label(CompanyDataFrame, text="Postal Code")
         CenterALabel = Label(CompanyDataFrame, text="Center A Info")
         CenterBLabel = Label(CompanyDataFrame, text="Center B Info")
+        BuildingLabel = Label(CompanyDataFrame, text="Building")
+        PosCodeLabel = Label(CompanyDataFrame, text="Postal Code")
+        ComRegNumLabel = Label(CompanyDataFrame, text="Company Reg No.")
+        BuyerLabel = Label(CompanyDataFrame, text="Buyer")
         ContactNumLabel = Label(CompanyDataFrame, text="Contact No.")
         EmailLabel = Label(CompanyDataFrame, text="Contact Email")
 
         ComNameBox = Entry(CompanyDataFrame, width=30)
-        ComRegNumBox = Entry(CompanyDataFrame, width=30)
-        GSTRegNumBox = Entry(CompanyDataFrame, width=30)
         AddressBox = Entry(CompanyDataFrame, width=30)
-        PosCodeBox = Entry(CompanyDataFrame, width=30)
         CenterABox = Entry(CompanyDataFrame, width=30)
         CenterBBox = Entry(CompanyDataFrame, width=30)
+        BuildingBox = Entry(CompanyDataFrame, width=30)
+        PosCodeBox = Entry(CompanyDataFrame, width=30)
+        ComRegNumBox = Entry(CompanyDataFrame, width=30)
+        BuyerBox = Entry(CompanyDataFrame, width=30)
         ContactNumBox = Entry(CompanyDataFrame, width=30)
         EmailBox = Entry(CompanyDataFrame, width=30)
 
         ComNameLabel.grid(row=0, column=0, padx=10, pady=5, sticky=E)
-        ComRegNumLabel.grid(row=1, column=0, padx=10, pady=5, sticky=E)
-        GSTRegNumLabel.grid(row=2, column=0, padx=10, pady=5, sticky=E)
-        AddressLabel.grid(row=3, column=0, padx=10, pady=5, sticky=E)
-        PosCodeLabel.grid(row=4, column=0, padx=10, pady=5, sticky=E)
-        CenterALabel.grid(row=5, column=0, padx=10, pady=5, sticky=E)
-        CenterBLabel.grid(row=6, column=0, padx=10, pady=5, sticky=E)
-        ContactNumLabel.grid(row=7, column=0, padx=10, pady=5, sticky=E)
-        EmailLabel.grid(row=8, column=0, padx=10, pady=5, sticky=E)
-        
+        AddressLabel.grid(row=1, column=0, padx=10, pady=5, sticky=E)
+        CenterALabel.grid(row=2, column=0, padx=10, pady=5, sticky=E)
+        CenterBLabel.grid(row=3, column=0, padx=10, pady=5, sticky=E)
+        BuildingLabel.grid(row=4, column=0, padx=10, pady=5, sticky=E)
+        PosCodeLabel.grid(row=5, column=0, padx=10, pady=5, sticky=E)
+        ComRegNumLabel.grid(row=6, column=0, padx=10, pady=5, sticky=E)
+        BuyerLabel.grid(row=7, column=0, padx=10, pady=5, sticky=E)
+        ContactNumLabel.grid(row=8, column=0, padx=10, pady=5, sticky=E)
+        EmailLabel.grid(row=9, column=0, padx=10, pady=5, sticky=E)
+
         ComNameBox.grid(row=0, column=1, padx=10, pady=5, sticky=W)
-        ComRegNumBox.grid(row=1, column=1, padx=10, pady=5, sticky=W)
-        GSTRegNumBox.grid(row=2, column=1, padx=10, pady=5, sticky=W)
-        AddressBox.grid(row=3, column=1, padx=10, pady=5, sticky=W)
-        PosCodeBox.grid(row=4, column=1, padx=10, pady=5, sticky=W)
-        CenterABox.grid(row=5, column=1, padx=10, pady=5, sticky=W)
-        CenterBBox.grid(row=6, column=1, padx=10, pady=5, sticky=W)
-        ContactNumBox.grid(row=7, column=1, padx=10, pady=5, sticky=W)
-        EmailBox.grid(row=8, column=1, padx=10, pady=5, sticky=W)
+        AddressBox.grid(row=1, column=1, padx=10, pady=5, sticky=W)
+        CenterABox.grid(row=2, column=1, padx=10, pady=5, sticky=W)
+        CenterBBox.grid(row=3, column=1, padx=10, pady=5, sticky=W)
+        BuildingBox.grid(row=4, column=1, padx=10, pady=5, sticky=W)
+        PosCodeBox.grid(row=5, column=1, padx=10, pady=5, sticky=W)
+        ComRegNumBox.grid(row=6, column=1, padx=10, pady=5, sticky=W)
+        BuyerBox.grid(row=7, column=1, padx=10, pady=5, sticky=W)
+        ContactNumBox.grid(row=8, column=1, padx=10, pady=5, sticky=W)
+        EmailBox.grid(row=9, column=1, padx=10, pady=5, sticky=W)
         
         def queryComInfo():
             curCom = connCom.cursor()
@@ -2299,28 +2533,39 @@ def openPurchase():
                 pass
             else:
                 ComNameBox.insert(0, comInfo[0][1])
-                ComRegNumBox.insert(0, comInfo[0][2])
-                GSTRegNumBox.insert(0, comInfo[0][3])
-                AddressBox.insert(0, comInfo[0][4])
-                PosCodeBox.insert(0, comInfo[0][5])
-                CenterABox.insert(0, comInfo[0][6])
-                CenterBBox.insert(0, comInfo[0][7])
-                ContactNumBox.insert(0, comInfo[0][8])
-                EmailBox.insert(0, comInfo[0][9])
+                AddressBox.insert(0, comInfo[0][2])
+                CenterABox.insert(0, comInfo[0][3])
+                CenterBBox.insert(0, comInfo[0][4])
+                BuildingBox.insert(0, comInfo[0][5])
+                PosCodeBox.insert(0, comInfo[0][6])
+                ComRegNumBox.insert(0, comInfo[0][7])
+                BuyerBox.insert(0, comInfo[0][8])
+                ContactNumBox.insert(0, comInfo[0][9])
+                EmailBox.insert(0, comInfo[0][10])
         
         def updateComInfo():
+            respCompanyInfo = messagebox.askokcancel("Confirmation",
+                                                     "Submit this Info?",
+                                                     parent=comWin)
+            if respCompanyInfo == True:
+                updateComInfoCom()
+            else:
+                pass
+        
+        def updateComInfoCom():
             curCom = connCom.cursor()
             curCom.execute("SELECT * FROM `COMPANY_MWA` WHERE oid = 1")
             result = curCom.fetchall()
             if result == []:
                 createInfoCom = """ INSERT INTO `COMPANY_MWA`
-                (ComName, ComRegNum, GSTRegNum, Address, PosCode, 
-                 CenterA, CenterB, ContactNum, Email)
+                (ComName, Address, CenterA, CenterB, Building, 
+                 PosCode, ComRegNum, Buyer, ContactNum, Email)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)"""
             
-                InfoComValue = (ComNameBox.get(), ComRegNumBox.get(), GSTRegNumBox.get(), 
-                                AddressBox.get(), PosCodeBox.get(), CenterABox.get(),
-                                CenterBBox.get(), ContactNumBox.get(), EmailBox.get())
+                InfoComValue = (ComNameBox.get(), AddressBox.get(), CenterABox.get(), 
+                                CenterBBox.get(), BuildingBox.get(), PosCodeBox.get(), 
+                                ComRegNumBox.get(), BuyerBox.get(), ContactNumBox.get(), 
+                                EmailBox.get())
                 
                 curCom.execute(createInfoCom, InfoComValue)
                 connCom.commit()
@@ -2332,20 +2577,22 @@ def openPurchase():
             else:
                 updateInfoCom = """ UPDATE `COMPANY_MWA` SET
                 `ComName` = %s,
-                `ComRegNum` = %s,
-                `GSTRegNum` = %s,
                 `Address` = %s,
-                `PosCode` = %s,
                 `CenterA` = %s,
                 `CenterB` = %s,
+                `Building` = %s,
+                `PosCode` = %s,
+                `ComRegNum` = %s,
+                `Buyer` = %s,
                 `ContactNum` = %s,
                 `Email` = %s
                 
                 WHERE `oid` = 1"""
                 
-                UpdateComValue = (ComNameBox.get(), ComRegNumBox.get(), GSTRegNumBox.get(), 
-                                  AddressBox.get(), PosCodeBox.get(), CenterABox.get(),
-                                  CenterBBox.get(), ContactNumBox.get(), EmailBox.get())
+                UpdateComValue = (ComNameBox.get(), AddressBox.get(), CenterABox.get(), 
+                                  CenterBBox.get(), BuildingBox.get(), PosCodeBox.get(), 
+                                  ComRegNumBox.get(), BuyerBox.get(), ContactNumBox.get(), 
+                                  EmailBox.get())
                 
                 curCom.execute(updateInfoCom, UpdateComValue)
                 connCom.commit()
@@ -2356,12 +2603,13 @@ def openPurchase():
             
         def clearEntryMWA():
             ComNameBox.delete(0, END)
-            ComRegNumBox.delete(0, END)
-            GSTRegNumBox.delete(0, END)
             AddressBox.delete(0, END)
-            PosCodeBox.delete(0, END)
             CenterABox.delete(0, END)
             CenterBBox.delete(0, END)
+            BuildingBox.delete(0, END)
+            PosCodeBox.delete(0, END)
+            ComRegNumBox.delete(0, END)
+            BuyerBox.delete(0, END)
             ContactNumBox.delete(0, END)
             EmailBox.delete(0, END)
         
