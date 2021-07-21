@@ -10,6 +10,9 @@ from mysql.connector import connect, Error
 import csv
 import ConnConfig
 
+
+EmpNum = None
+
 logininfo = (ConnConfig.host,ConnConfig.username,ConnConfig.password)
 
 connInit = connect(host = logininfo[0],
@@ -126,11 +129,7 @@ SetupCommand = ["""
                      `VendorRemark` VARCHAR(100),
                      `TransCcy` VARCHAR(10),
                      `TransExRate` FLOAT,
-                     `ProgressStat` INT DEFAULT 0,
-                     `ApproveStat` INT DEFAULT 0,
-                     `IssueStat` INT DEFAULT 0,
-                     `OrderStat` INT DEFAULT 0,
-                     `TotalSGD` FLOAT DEFAULT 0.00)
+                     `DateEntry` DATETIME NOT NULL)
                     
                     ENGINE = InnoDB
                     DEFAULT CHARACTER SET = utf8mb4
@@ -146,15 +145,14 @@ SetupCommand = ["""
                     CREATE TABLE IF NOT EXISTS `COMPANY_INFO`.`COMPANY_MWA`
                     (`oid` INT AUTO_INCREMENT PRIMARY KEY,
                      `ComName` VARCHAR(100),
-                     `Address` VARCHAR(100),
-                     `CenterA` VARCHAR(80),
-                     `CenterB` VARCHAR(80),
-                     `Building` VARCHAR(80),
-                     `PosCode` VARCHAR(50),
                      `ComRegNum` VARCHAR(30),
-                     `Buyer` VARCHAR(100),
-                     `ContactNum` VARCHAR(30),
-                     `Email` VARCHAR(100))
+                     `GSTRegNum` VARCHAR(30),
+                     `Address` VARCHAR(100),
+                     `PosCode` VARCHAR(50),
+                     `CenterA` VARCHAR(50),
+                     `CenterB` VARCHAR(50),
+                     `ContactNum` VARCHAR(20),
+                     `Email` VARCHAR(50))
                     
                     ENGINE = InnoDB
                     DEFAULT CHARACTER SET = utf8mb4
@@ -237,18 +235,14 @@ existLst = curCom.fetchall()
 
 if existLst == []:
     defaultComSql = f"""INSERT INTO `COMPANY_INFO`.`COMPANY_MWA` (
-    ComName, Address, CenterA, CenterB, Building, PosCode, 
-    ComRegNum, Buyer, ContactNum, Email)
+    ComName, ComRegNum, GSTRegNum, Address, PosCode, 
+    CenterA, CenterB, ContactNum, Email)
 
-    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
+    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)"""
                 
-    defaultComInfo = ("Motionwell Automation Pte. Ltd.", "20 Woodlands Link", 
-                      "#09-08 (Design & Assembly Center)", 
-                      "#07-26 (Manufacturing Shop)", 
-                      "Woodlands Industrial Estate",
-                      "Singapore 738733",
-                      "201435019E", "Shanner",
-                      "98506102", "info@motionwell.com.sg")
+    defaultComInfo = ("Motionwell Automation Pte. Ltd.", "201435019E", "201435019E",
+                      "20 Woodlands Link", "738733", "#09-08 (Design & Assembly Center)", 
+                      "#07-26 (Manufacturing Shop)", "98506102", "info@motionwell.com.sg")
     
     curCom.execute(defaultComSql, defaultComInfo)
     connLogin.commit()
@@ -297,7 +291,7 @@ CreateVendDatabase = ["""
                       """
                       CREATE TABLE IF NOT EXISTS `INDEX_VEND_MASTER`.`VENDOR_LIST`
                       (`oid` INT AUTO_INCREMENT PRIMARY KEY,
-                       `VENDOR_NAME` VARCHAR(20),
+                       `VENDOR_NAME` VARCHAR(20) UNIQUE KEY,
                        `CLASS` VARCHAR(10),
                        `COMPANY_NAME` VARCHAR(100),
                        `COMPANY_COUNTRY` VARCHAR(50),
@@ -457,6 +451,7 @@ def ChangePW(username = None):
     
     
     def ConfirmChangePW():
+        
         Cursor = connLogin.cursor()
         Cursor.execute(f"""SELECT * FROM `index_emp_master`.`login_data` 
                          WHERE `EMPLOYEE_ID` = '{CurrentUserName.get()}' """)
@@ -507,7 +502,7 @@ ResetPasswordLabel.grid(row=3, column=0, padx=10, pady=(10,0),sticky = W,columns
 ResetPasswordLabel.bind("<Button-1>", lambda e: ChangePW())
 
 def Login():
-    global AUTH,AUTHLVL,LOCKEDUSER
+    global AUTH,AUTHLVL,LOCKEDUSER,EmpNum
     LOCKEDUSER = (User.get(),Password.get())
     
         
@@ -533,6 +528,7 @@ def Login():
                     ChangePW(LOCKEDUSER[0])
                     
                 else:
+                    EmpNum = User.get()
                     root.destroy()
             else:
                 Popup = messagebox.showerror("Authentication Failed", "Please enter a valid password",parent = root)
