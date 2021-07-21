@@ -9,6 +9,7 @@ from mysql import *
 import mysql.connector
 import csv
 import ConnConfig
+import Login
 
 logininfo = (ConnConfig.host,ConnConfig.username,ConnConfig.password)
 
@@ -26,6 +27,19 @@ connEmp = mysql.connector.connect(host = logininfo[0],
                                   password =logininfo[2],
                                   database= "INDEX_EMP_MASTER")
 
+#0 BOM Cost
+#1 Export CSV
+#2 Total Cost
+#3 Delete Project
+#4 Edit Employee
+#5 Approve PurOrder
+#6 Generate PurOrder
+
+def AuthLevel(Auth, index):
+    AuthDic = {0:[0,0,0,0,0,0,0], 1:[1,1,0,0,0,0,1],
+               2:[1,1,1,1,0,0,0], 3:[1,1,1,1,1,1,1]}
+    AuthBool = AuthDic.get(Auth)[index]
+    return AuthBool
 
 def openEmployee():
     EmpWin = Toplevel()
@@ -101,6 +115,113 @@ def openEmployee():
                                         statLst[rec[8]]))
         connEmp.commit()
         curEmp.close()
+
+
+
+
+
+
+
+
+
+
+    def deselectEmpClick(e):
+        if AuthLevel(Login.AUTHLVL, 4) == False:
+            EmpNameBox.config(state="normal")
+            EmpClassBox.config(state="normal")
+            EmpIDBox.config(state="normal")
+            EmpIDGenButton.config(state="normal")
+            EmpStatusBox.config(state="normal")
+            EmpNationBox.config(state="normal")
+            EmpNationGenButton.config(state="normal")
+            EmpDOBBox.config(state="normal")
+            EmpDOBCalendarButton.config(state="normal")
+            EmpAddressBox.config(state="normal")
+            EmpDateJointBox.config(state="normal")
+            EmpDateJoinCalendarButton.config(state="normal")
+            
+            deselectEmp()
+            
+            EmpNameBox.config(state="disabled")
+            EmpClassBox.config(state="disabled")
+            EmpIDBox.config(state="disabled")
+            EmpIDGenButton.config(state="disabled")
+            EmpStatusBox.config(state="disabled")
+            EmpNationBox.config(state="disabled")
+            EmpNationGenButton.config(state="disabled")
+            EmpDOBBox.config(state="disabled")
+            EmpDOBCalendarButton.config(state="disabled")
+            EmpAddressBox.config(state="disabled")
+            EmpDateJointBox.config(state="disabled")
+            EmpDateJoinCalendarButton.config(state="disabled")
+        else:
+            deselectEmp()
+    
+    def selectEmpClick(e):
+        if AuthLevel(Login.AUTHLVL, 4) == False:
+            EmpNameBox.config(state="normal")
+            EmpClassBox.config(state="normal")
+            EmpIDBox.config(state="normal")
+            EmpIDGenButton.config(state="normal")
+            EmpStatusBox.config(state="normal")
+            EmpNationBox.config(state="normal")
+            EmpNationGenButton.config(state="normal")
+            EmpDOBBox.config(state="normal")
+            EmpDOBCalendarButton.config(state="normal")
+            EmpAddressBox.config(state="normal")
+            EmpDateJointBox.config(state="normal")
+            EmpDateJoinCalendarButton.config(state="normal")
+            
+            selectEmp()
+            
+            EmpNameBox.config(state="disabled")
+            EmpClassBox.config(state="disabled")
+            EmpIDBox.config(state="disabled")
+            EmpIDGenButton.config(state="disabled")
+            EmpStatusBox.config(state="disabled")
+            EmpNationBox.config(state="disabled")
+            EmpNationGenButton.config(state="disabled")
+            EmpDOBBox.config(state="disabled")
+            EmpDOBCalendarButton.config(state="disabled")
+            EmpAddressBox.config(state="disabled")
+            EmpDateJointBox.config(state="disabled")
+            EmpDateJoinCalendarButton.config(state="disabled")
+        
+        else:
+            selectEmp()
+    
+    def updateEmpReturn(e):
+        if AuthLevel(Login.AUTHLVL, 4) == False:
+            messagebox.showerror("Insufficient Clearance",
+                                 "You are NOT authorized to update", parent=EmpWin)
+        else:
+            if buttonUpdateEmp["state"] == "disabled":
+                messagebox.showerror("Unable to Update", 
+                                     "Please Select an Employee", parent=EmpWin) 
+            else:
+                updateEmp()
+    
+    def deleteEmpDel(e):
+        if AuthLevel(Login.AUTHLVL, 4) == False:
+            messagebox.showerror("Insufficient Clearance",
+                                 "You are NOT authorized to delete", parent=EmpWin)
+        else:
+            if buttonDeleteEmp["state"] == "disabled":
+                messagebox.showerror("Unable to Delete", 
+                                     "Please Select an Employee", parent=EmpWin) 
+            else:
+                deleteEmp()
+
+
+
+    EmpTreeView.bind("<Button-3>", deselectEmpClick)
+    EmpTreeView.bind("<Double-Button-1>", selectEmpClick)
+    EmpTreeView.bind("<Return>", updateEmpReturn)
+    EmpTreeView.bind("<Delete>", deleteEmpDel)
+
+
+    
+        
     
     
     def genEmpID():
@@ -251,171 +372,195 @@ def openEmployee():
         buttonClose.grid(row=1, column=2, padx=5, pady=5)
     
     def updateEmp():
-        
-        sqlCommand = f"""UPDATE EMP_DATA SET
-        `EMPLOYEE_ID` = %s,
-        `EMPLOYEE_NAME` = %s, 
-        `EMPLOYEE_CLASS` = %s,
-        `NATIONALITY` = %s,
-        `DOB` = %s,
-        `ADDRESS` = %s,
-        `JOIN_DATE` = %s,
-        `STATUS` = %s
-        
-        WHERE `oid` = %s"""
-        
-        
-        
-
-        
-        def checkDateEmp(dateVar):
-            if dateVar.get() == "":
-                return None
-            else:
-                return dateVar.get()
-        
-        selected = EmpTreeView.focus()
-        
-        inputs = (EmpIDBox.get(), EmpNameBox.get(), EmpClassBox.current(), 
-                  EmpNationBox.get(), checkDateEmp(EmpDOBBox), EmpAddressBox.get(),
-                  checkDateEmp(EmpDateJointBox), EmpStatusBox.current(), selected)
-        
-        inputs2 =(EmpIDBox.get(), EmpClassBox.current(), selected)
-        empFullName = f"{EmpIDBox.get()} - {EmpNameBox.get()}"
-        curEmp = connEmp.cursor()
-
-        curEmp.execute(sqlCommand, inputs)
-        connEmp.commit()
-        curEmp.execute("""UPDATE LOGIN_DATA SET
-        `EMPLOYEE_ID` = %s,
-        `EMPLOYEE_CLASS` = %s
-        
-        WHERE `oid` = %s""",inputs2)
-        connEmp.commit()
-        
-        curEmp.close()
-        clearEntryEmp()
-        EmpTreeView.delete(*EmpTreeView.get_children())
-        queryTreeEmp()
-        
-        messagebox.showinfo("Update Successful", 
-                            f"You Have Updated Employee {empFullName}", parent=EmpWin) 
+        respUpdateEmp = messagebox.askokcancel("Confirmation",
+                                               "Update This Employee?",
+                                               parent=EmpWin)
+        if respUpdateEmp == True:
+            sqlCommand = f"""UPDATE EMP_DATA SET
+            `EMPLOYEE_ID` = %s,
+            `EMPLOYEE_NAME` = %s, 
+            `EMPLOYEE_CLASS` = %s,
+            `NATIONALITY` = %s,
+            `DOB` = %s,
+            `ADDRESS` = %s,
+            `JOIN_DATE` = %s,
+            `STATUS` = %s
+            
+            WHERE `oid` = %s"""
     
-    def createEmp():
-        createComEmp = """INSERT INTO EMP_DATA (
-        EMPLOYEE_ID, EMPLOYEE_NAME, EMPLOYEE_CLASS, NATIONALITY, 
-        DOB, ADDRESS, JOIN_DATE, STATUS)
+            def checkDateEmp(dateVar):
+                if dateVar.get() == "":
+                    return None
+                else:
+                    return dateVar.get()
+            
+            selected = EmpTreeView.selection()[0]
+            
+            inputs = (EmpIDBox.get(), EmpNameBox.get(), EmpClassBox.current(), 
+                      EmpNationBox.get(), checkDateEmp(EmpDOBBox), EmpAddressBox.get(),
+                      checkDateEmp(EmpDateJointBox), EmpStatusBox.current(), selected)
+            
+            inputs2 =(EmpIDBox.get(), EmpClassBox.current(), selected)
+            empFullName = f"{EmpIDBox.get()} - {EmpNameBox.get()}"
+            curEmp = connEmp.cursor()
     
-        VALUES (%s, %s ,%s, %s, %s, %s, %s, %s)"""
-        
-        def checkDateEmp(dateVar):
-            if dateVar.get() == "":
-                return None
-            else:
-                return dateVar.get()
-        
-        values = (EmpIDBox.get(), EmpNameBox.get(), EmpClassBox.current(), 
-                  EmpNationBox.get(), checkDateEmp(EmpDOBBox),
-                  EmpAddressBox.get(), checkDateEmp(EmpDateJointBox),
-                  EmpStatusBox.current())
-        
-        values2 =(EmpIDBox.get(), EmpClassBox.current())
-                 
-        empFullName = f"{EmpIDBox.get()} - {EmpNameBox.get()}"
-        
-        curEmp = connEmp.cursor()
-        curEmp.execute(createComEmp, values)
-        connEmp.commit()
-        
-        curEmp.execute("""INSERT INTO LOGIN_DATA (
-        EMPLOYEE_ID, EMPLOYEE_CLASS)
-        
-        VALUES (%s, %s)""", values2)
-        connEmp.commit()
-        curEmp.close()
-        clearEntryEmp()
-        EmpTreeView.delete(*EmpTreeView.get_children())
-        queryTreeEmp()
-        
-        messagebox.showinfo("Create Successful", 
-                            f"You Have Added New Employee {empFullName}", parent=EmpWin) 
-    
-    def deleteEmp():
-        empID = EmpIDBox.get()
-        empName = EmpNameBox.get()
-        empFullName = f"{empID} - {empName}"
-        
-        selected = EmpTreeView.focus()
-        sqlDelete = "DELETE FROM EMP_DATA WHERE oid = %s"
-        valDelete = (selected, )
-        curEmp = connEmp.cursor()
-        curEmp.execute(sqlDelete, valDelete)
-        connEmp.commit()
-        curEmp.execute("DELETE FROM LOGIN_DATA WHERE oid = %s", valDelete)
-        connEmp.commit()
-        curEmp.close()
-        clearEntryEmp()
-        EmpTreeView.delete(*EmpTreeView.get_children())
-        queryTreeEmp()
-        
-        messagebox.showinfo("Delete Successful", 
-                            f"You Have Removed Employee {empFullName}", parent=EmpWin) 
-    
-    def selectEmp():
-        selected = EmpTreeView.focus()
-        sqlSelect = "SELECT * FROM EMP_DATA WHERE oid = %s"
-        valSelect = (selected, )
-        curEmp = connEmp.cursor()
-        curEmp.execute(sqlSelect, valSelect)
-        recLst = curEmp.fetchall()
-        connEmp.commit()
-        curEmp.close()
-        
-        clearEntryEmp()
-        
-        EmployeeIDRef = recLst[0][1]
-    
-        if EmployeeIDRef == "ADM01":
-            EmpIDGenButton.config(state=DISABLED)
-            buttonUpdateEmp.config(state=DISABLED)
-            buttonDeleteEmp.config(state=DISABLED)
-            buttonCreateEmp.config(state=DISABLED)
+            curEmp.execute(sqlCommand, inputs)
+            connEmp.commit()
+            curEmp.execute("""UPDATE LOGIN_DATA SET
+            `EMPLOYEE_ID` = %s,
+            `EMPLOYEE_CLASS` = %s
+            
+            WHERE `oid` = %s""",inputs2)
+            connEmp.commit()
+            
+            curEmp.close()
+            clearEntryEmp()
+            EmpTreeView.delete(*EmpTreeView.get_children())
+            queryTreeEmp()
+            
+            messagebox.showinfo("Update Successful", 
+                                f"You Have Updated Employee {empFullName}", parent=EmpWin) 
         
         else:
-            EmpIDBox.insert(0, recLst[0][1])
-            EmpNameBox.insert(0, recLst[0][2])
-            EmpClassBox.current(recLst[0][3])
+            pass
+    
+    def createEmp():
+        respCreateEmp = messagebox.askokcancel("Confirmation",
+                                               "Update This Employee?",
+                                               parent=EmpWin)
+        if respCreateEmp == True:
+            createComEmp = """INSERT INTO EMP_DATA (
+            EMPLOYEE_ID, EMPLOYEE_NAME, EMPLOYEE_CLASS, NATIONALITY, 
+            DOB, ADDRESS, JOIN_DATE, STATUS)
+        
+            VALUES (%s, %s ,%s, %s, %s, %s, %s, %s)"""
             
-            EmpNationBox.config(state="normal")
-            EmpNationBox.insert(0, recLst[0][4])
-            EmpNationBox.config(state="readonly")
+            def checkDateEmp(dateVar):
+                if dateVar.get() == "":
+                    return None
+                else:
+                    return dateVar.get()
             
-            if recLst[0][5] == None:
-                EmpDOBBox.config(state="normal")
-                EmpDOBBox.insert(0, "")
-                EmpDOBBox.config(state="readonly")
+            values = (EmpIDBox.get(), EmpNameBox.get(), EmpClassBox.current(), 
+                      EmpNationBox.get(), checkDateEmp(EmpDOBBox),
+                      EmpAddressBox.get(), checkDateEmp(EmpDateJointBox),
+                      EmpStatusBox.current())
+            
+            values2 =(EmpIDBox.get(), EmpClassBox.current())
+                     
+            empFullName = f"{EmpIDBox.get()} - {EmpNameBox.get()}"
+            
+            curEmp = connEmp.cursor()
+            curEmp.execute(createComEmp, values)
+            connEmp.commit()
+            
+            curEmp.execute("""INSERT INTO LOGIN_DATA (
+            EMPLOYEE_ID, EMPLOYEE_CLASS)
+            
+            VALUES (%s, %s)""", values2)
+            connEmp.commit()
+            curEmp.close()
+            clearEntryEmp()
+            EmpTreeView.delete(*EmpTreeView.get_children())
+            queryTreeEmp()
+            
+            messagebox.showinfo("Create Successful", 
+                                f"You Have Added New Employee {empFullName}", parent=EmpWin) 
+        
+        else:
+            pass
+    
+    def deleteEmp():
+        respDeleteEmp = messagebox.askokcancel("Confirmation",
+                                               "Update This Employee?",
+                                               parent=EmpWin)
+        if respDeleteEmp == True:
+            empID = EmpIDBox.get()
+            empName = EmpNameBox.get()
+            empFullName = f"{empID} - {empName}"
+            
+            selected = EmpTreeView.selection()[0]
+            sqlDelete = "DELETE FROM EMP_DATA WHERE oid = %s"
+            valDelete = (selected, )
+            curEmp = connEmp.cursor()
+            curEmp.execute(sqlDelete, valDelete)
+            connEmp.commit()
+            curEmp.execute("DELETE FROM LOGIN_DATA WHERE oid = %s", valDelete)
+            connEmp.commit()
+            curEmp.close()
+            clearEntryEmp()
+            EmpTreeView.delete(*EmpTreeView.get_children())
+            queryTreeEmp()
+            
+            messagebox.showinfo("Delete Successful", 
+                                f"You Have Removed Employee {empFullName}", parent=EmpWin)
+        
+        else:
+            pass
+    
+    def selectEmp():
+        selectVal = EmpTreeView.selection()
+        if selectVal == ():
+            messagebox.showerror("Error",
+                                 "Please Select an Employee",
+                                 parent=EmpWin)
+        else:
+            selected = selectVal[0]
+            
+            sqlSelect = "SELECT * FROM EMP_DATA WHERE oid = %s"
+            valSelect = (selected, )
+            curEmp = connEmp.cursor()
+            curEmp.execute(sqlSelect, valSelect)
+            recLst = curEmp.fetchall()
+            connEmp.commit()
+            curEmp.close()
+            
+            clearEntryEmp()
+            
+            EmployeeIDRef = recLst[0][1]
+        
+            if EmployeeIDRef == "ADM01":
+                EmpIDGenButton.config(state=DISABLED)
+                buttonUpdateEmp.config(state=DISABLED)
+                buttonDeleteEmp.config(state=DISABLED)
+                buttonCreateEmp.config(state=DISABLED)
+            
             else:
-                EmpDOBBox.config(state="normal")
-                EmpDOBBox.insert(0, recLst[0][5])
-                EmpDOBBox.config(state="readonly")
-            
-            EmpAddressBox.insert(0, recLst[0][6])
-            
-            if recLst[0][7] == None:
-                EmpDateJointBox.config(state="normal")
-                EmpDateJointBox.insert(0, "")
-                EmpDateJointBox.config(state="readonly")
-            else:
-                EmpDateJointBox.config(state="normal")
-                EmpDateJointBox.insert(0, recLst[0][7])
-                EmpDateJointBox.config(state="readonly")
-            
-            EmpStatusBox.current(recLst[0][8])
-            
-            EmpIDGenButton.config(state=DISABLED)
-            buttonUpdateEmp.config(state=NORMAL)
-            buttonDeleteEmp.config(state=NORMAL)
-            buttonCreateEmp.config(state=DISABLED)
+                EmpIDBox.insert(0, recLst[0][1])
+                EmpNameBox.insert(0, recLst[0][2])
+                EmpClassBox.current(recLst[0][3])
+                
+                EmpNationBox.config(state="normal")
+                EmpNationBox.insert(0, recLst[0][4])
+                EmpNationBox.config(state="readonly")
+                
+                if recLst[0][5] == None:
+                    EmpDOBBox.config(state="normal")
+                    EmpDOBBox.insert(0, "")
+                    EmpDOBBox.config(state="readonly")
+                else:
+                    EmpDOBBox.config(state="normal")
+                    EmpDOBBox.insert(0, recLst[0][5])
+                    EmpDOBBox.config(state="readonly")
+                
+                EmpAddressBox.insert(0, recLst[0][6])
+                
+                if recLst[0][7] == None:
+                    EmpDateJointBox.config(state="normal")
+                    EmpDateJointBox.insert(0, "")
+                    EmpDateJointBox.config(state="readonly")
+                else:
+                    EmpDateJointBox.config(state="normal")
+                    EmpDateJointBox.insert(0, recLst[0][7])
+                    EmpDateJointBox.config(state="readonly")
+                
+                EmpStatusBox.current(recLst[0][8])
+                
+                EmpIDGenButton.config(state=DISABLED)
+                buttonUpdateEmp.config(state=NORMAL)
+                buttonDeleteEmp.config(state=NORMAL)
+                buttonCreateEmp.config(state=DISABLED)
+                EmpTreeView.config(selectmode="none")
     
     def deselectEmp():
         selected = EmpTreeView.selection()
@@ -430,6 +575,7 @@ def openEmployee():
         buttonUpdateEmp.config(state=DISABLED)
         buttonDeleteEmp.config(state=DISABLED)
         buttonCreateEmp.config(state=NORMAL)
+        EmpTreeView.config(selectmode="browse")
         
         EmpNameBox.delete(0, END)
         EmpClassBox.current(0)
@@ -547,5 +693,34 @@ def openEmployee():
     
     buttonCloseEmp = Button(EmpButtonFrame, text="Close", command=closeEmp)
     buttonCloseEmp.grid(row=0, column=7, padx=10, pady=10, sticky=W)
+    
+    if AuthLevel(Login.AUTHLVL, 4) == False:
+        EmpNameBox.config(state="disabled")
+        EmpClassBox.config(state="disabled")
+        EmpIDBox.config(state="disabled")
+        EmpIDGenButton.config(state="disabled")
+        EmpStatusBox.config(state="disabled")
+        EmpNationBox.config(state="disabled")
+        EmpNationGenButton.config(state="disabled")
+        EmpDOBBox.config(state="disabled")
+        EmpDOBCalendarButton.config(state="disabled")
+        EmpAddressBox.config(state="disabled")
+        EmpDateJointBox.config(state="disabled")
+        EmpDateJoinCalendarButton.config(state="disabled")
+        
+        buttonUpdateEmp.grid_forget()
+        buttonCreateEmp.grid_forget()
+        buttonDeleteEmp.grid_forget()
+        buttonSelectEmp.grid_forget()
+        buttonDeselectEmp.grid_forget()
+        buttonClearEntryEmp.grid_forget()
+        buttonRefreshEmp.grid_forget()
+        buttonCloseEmp.config(width=10)
 
     queryTreeEmp()
+    
+    
+    
+    
+    
+    

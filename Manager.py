@@ -237,11 +237,16 @@ if Login.AUTH:
             updatePro()
     
     def deleteProDel(e):
-        if buttonDeletePro["state"] == "disabled":
-            messagebox.showwarning("Unable to Delete", 
-                                   "Please Select a Project", parent=framePro) 
+        if AuthLevel(Login.AUTHLVL, 3) == False:
+            messagebox.showerror("Insufficient Clearance",
+                                 "You are NOT authorized to delete", parent=framePro)
+        
         else:
-            deletePro()
+            if buttonDeletePro["state"] == "disabled":
+                messagebox.showwarning("Unable to Delete", 
+                                       "Please Select a Project", parent=framePro) 
+            else:
+                deletePro()
             
     def loadProClick(e):
         if buttonLoadPro["state"] == "normal":
@@ -591,7 +596,7 @@ if Login.AUTH:
     def deletePro():
         if AuthLevel(Login.AUTHLVL, 3) == False:
             messagebox.showerror("Insufficient Clearance",
-                                 "You are NOT authorized for this action")
+                                 "You are NOT authorized to delete", parent=framePro)
         
         else:
             respDelPro = messagebox.askokcancel("Confirmation",
@@ -2872,25 +2877,28 @@ if Login.AUTH:
                 UnitTreeView.column("TotalCost", anchor=CENTER, width=80)
                 
                 UnitTreeView.heading("#0", text="Index", anchor=W)
-                UnitTreeView.heading("Part", text="Part", anchor=CENTER)
-                UnitTreeView.heading("Description", text="Description", anchor=CENTER)
-                UnitTreeView.heading("D", text="D", anchor=CENTER)
-                UnitTreeView.heading("CLS", text="CLS", anchor=CENTER)
-                UnitTreeView.heading("V", text="V", anchor=CENTER)
-                UnitTreeView.heading("Maker", text="Maker", anchor=CENTER)
-                UnitTreeView.heading("Spec", text="Maker Specification", anchor=CENTER)
-                UnitTreeView.heading("DES", text="DES", anchor=CENTER)
-                UnitTreeView.heading("SPA", text="SPA", anchor=CENTER)
-                UnitTreeView.heading("OH", text="OH", anchor=CENTER)
-                UnitTreeView.heading("REQ", text="REQ", anchor=CENTER)
-                UnitTreeView.heading("PCH", text="PCH", anchor=CENTER)
-                UnitTreeView.heading("BAL", text="BAL", anchor=CENTER)
-                UnitTreeView.heading("RCV", text="RCV", anchor=CENTER)
-                UnitTreeView.heading("OS", text="OS", anchor=CENTER)
-                UnitTreeView.heading("Remark", text="Remark", anchor=CENTER)
-                UnitTreeView.heading("Vendor", text="Vendor", anchor=CENTER)
-                UnitTreeView.heading("UnitCost", text="Unit Cost", anchor=CENTER)
-                UnitTreeView.heading("TotalCost", text="Total Cost", anchor=CENTER)
+                UnitTreeView.heading("Part", text="Part", anchor=CENTER) #0
+                UnitTreeView.heading("Description", text="Description", anchor=CENTER) #1
+                UnitTreeView.heading("D", text="D", anchor=CENTER) #2
+                UnitTreeView.heading("CLS", text="CLS", anchor=CENTER) #3
+                UnitTreeView.heading("V", text="V", anchor=CENTER) #4
+                UnitTreeView.heading("Maker", text="Maker", anchor=CENTER) #5
+                UnitTreeView.heading("Spec", text="Maker Specification", anchor=CENTER) #6
+                UnitTreeView.heading("DES", text="DES", anchor=CENTER) #7
+                UnitTreeView.heading("SPA", text="SPA", anchor=CENTER) #8
+                UnitTreeView.heading("OH", text="OH", anchor=CENTER) #9
+                UnitTreeView.heading("REQ", text="REQ", anchor=CENTER) #10
+                UnitTreeView.heading("PCH", text="PCH", anchor=CENTER) #11
+                UnitTreeView.heading("BAL", text="BAL", anchor=CENTER) #12
+                UnitTreeView.heading("RCV", text="RCV", anchor=CENTER) #13
+                UnitTreeView.heading("OS", text="OS", anchor=CENTER) #14
+                UnitTreeView.heading("Remark", text="Remark", anchor=CENTER) #15
+                UnitTreeView.heading("Vendor", text="Vendor", anchor=CENTER) #16
+                UnitTreeView.heading("UnitCost", text="Unit Cost", anchor=CENTER) #17
+                UnitTreeView.heading("TotalCost", text="Total Cost", anchor=CENTER) #18
+                
+                if AuthLevel(Login.AUTHLVL, 0) == False:
+                    UnitTreeView.config(displaycolumns = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16])
                 
                 def deselectUnitClick(e):
                     deselectUnit()
@@ -3091,8 +3099,96 @@ if Login.AUTH:
                     
                     connVend.commit()
                     curVend.close()
-        
+                
                 def updateUnit():
+                    if AuthLevel(Login.AUTHLVL, 0) == False:
+                        updateUnitComNoCost()
+                    else:
+                        updateUnitComCost()
+                
+                def updateUnitComNoCost():
+                    assemRef = assemFullName
+                    sqlCommand = f"""UPDATE `{assemRef}` SET
+                    PartNum = %s,
+                    Description = %s,
+                    D = %s,
+                    CLS = %s,
+                    V = %s,
+                    Maker = %s,
+                    Spec = %s,
+                    DES = %s,
+                    SPA = %s,
+                    OH = %s,
+                    REQ = %s,
+                    PCH = %s,
+                    BAL = %s,
+                    RCV = %s,
+                    OS = %s,
+                    REMARK = %s,
+                    Vendor = %s
+
+                    WHERE oid = %s
+                    """
+
+                    DLst = ["", "D"]
+                    
+                    PartNum = str(PartNumBox.get()).rjust(3,"0")
+                    Description = DescriptionBox.get().upper()
+                    D = DLst[DBox.current()]
+                    CLS = CLSBox.get()
+                    V = VBox.get()
+                    Maker = MakerBox.get()
+                    Spec = SpecBox.get().upper()
+                    DES = int(DESBox.get())
+                    SPA = int(SPABox.get())
+                    OH = int(OHBox.get())
+                    REQ = int(REQBox.get())
+                    PCH = int(PCHBox.get())
+                    BAL = int(BALBox.get())
+                    RCV = int(RCVBox.get())
+                    OS = int(OSBox.get())
+                    Remark = RemarkBox.get()
+                    Vendor = VendorBox.get()
+
+                    selected = UnitTreeView.selection()[0]
+                    
+                    inputs = (PartNum, Description, D, CLS, V,
+                              Maker, Spec, DES, SPA, OH, REQ, PCH,
+                              BAL, RCV, OS, Remark, Vendor, selected)
+                    
+                    updateUnitFormat = True
+                    try:
+                        int(PartNum)
+                    except:
+                        updateUnitFormat = False
+                    
+                    if updateUnitFormat == False:
+                        messagebox.showerror("Unable to Update",
+                                             "Please Key in an Integer",
+                                             parent=frameUnit)
+                    
+                    else:
+                        respUpdateUnit = messagebox.askokcancel("Confirmation", "Confirm Update")
+                        if respUpdateUnit == True:
+                            curLoad = connLoad.cursor()
+                            curLoad.execute(sqlCommand, inputs)
+                            connLoad.commit()
+                            curLoad.close()
+                            
+                            clearEntryUnit()
+                            UnitTreeView.delete(*UnitTreeView.get_children())
+                            queryTreeUnit()
+                            
+                            checkAssemTotal()
+                            checkMachTotal()
+                            checkProTotal()
+                            
+                            messagebox.showinfo("Update Successful", 
+                                                f"You Have Updated Part {PartNum}", parent=frameUnit) 
+                        else:
+                            pass
+                
+                def updateUnitComCost():
                     assemRef = assemFullName
                     sqlCommand = f"""UPDATE `{assemRef}` SET
                     PartNum = %s,
@@ -3404,27 +3500,48 @@ if Login.AUTH:
                         VendorBox.insert(0, resultSelect[0][17] if resultSelect[0][17] else "")
                         VendorBox.config(state="readonly")
                         
-                        if resultSelect[0][18] == None:
-                            UnitCostBox.insert(0, "")
+                        if AuthLevel(Login.AUTHLVL, 0) == False:
+                            UnitCostBox.insert(0, "NO AUTH")
                         else:
-                            UnitCostBox.insert(0, resultSelect[0][18])
+                            if resultSelect[0][18] == None:
+                                UnitCostBox.insert(0, "")
+                            else:
+                                UnitCostBox.insert(0, resultSelect[0][18])
                         
-                        UnitCostCcyLabel.config(text=str(resultSelect[0][20]))
-                        
-                        CurrencyUnitBox.config(state="normal")
-                        CurrencyUnitBox.delete(0, END)
-                        CurrencyUnitBox.insert(0, resultSelect[0][20])
-                        CurrencyUnitBox.config(state="readonly")
-                        
-                        ExRateBox.config(state="normal")
-                        ExRateBox.delete(0, END)
-                        ExRateBox.insert(0, resultSelect[0][21])
-                        ExRateBox.config(state="readonly")
-                        
-                        TotalUnitCostBox.config(state="normal")
-                        TotalUnitCostBox.delete(0, END)
-                        TotalUnitCostBox.insert(0, resultSelect[0][22])
-                        TotalUnitCostBox.config(state="readonly")
+                        if AuthLevel(Login.AUTHLVL, 0) == False:
+                            UnitCostCcyLabel.config(text="SGD")
+                            
+                            CurrencyUnitBox.config(state="normal")
+                            CurrencyUnitBox.delete(0, END)
+                            CurrencyUnitBox.insert(0, "SGD")
+                            CurrencyUnitBox.config(state="readonly")
+                            
+                            ExRateBox.config(state="normal")
+                            ExRateBox.delete(0, END)
+                            ExRateBox.insert(0, 1.0)
+                            ExRateBox.config(state="readonly")
+                            
+                            TotalUnitCostBox.config(state="normal")
+                            TotalUnitCostBox.delete(0, END)
+                            TotalUnitCostBox.insert(0, "NO AUTH")
+                            TotalUnitCostBox.config(state="readonly")
+                        else:
+                            UnitCostCcyLabel.config(text=str(resultSelect[0][20]))
+                            
+                            CurrencyUnitBox.config(state="normal")
+                            CurrencyUnitBox.delete(0, END)
+                            CurrencyUnitBox.insert(0, resultSelect[0][20])
+                            CurrencyUnitBox.config(state="readonly")
+                            
+                            ExRateBox.config(state="normal")
+                            ExRateBox.delete(0, END)
+                            ExRateBox.insert(0, resultSelect[0][21])
+                            ExRateBox.config(state="readonly")
+                            
+                            TotalUnitCostBox.config(state="normal")
+                            TotalUnitCostBox.delete(0, END)
+                            TotalUnitCostBox.insert(0, resultSelect[0][22])
+                            TotalUnitCostBox.config(state="readonly")
                         
                         buttonUpdateUnit.config(state=NORMAL)
                         buttonCreateUnit.config(state=DISABLED)
@@ -3815,56 +3932,61 @@ if Login.AUTH:
                     assemTypeRef = assemType
                     assemNameRef = assemName
                     assemRef = assemFullName
-                   
-                    respExportUnit = messagebox.askokcancel("Confirmation", "Confirm Export as CSV?")
-                    if respExportUnit == True:
-                        curLoad = connLoad.cursor()
-                        curLoad.execute(f"SELECT * FROM {assemRef}")
-                        result = curLoad.fetchall()
-                        connLoad.commit()
-                        curLoad.close()
-                        
-                        unitFull = f"{proName}-{machRef}-{assemTypeRef}{assemNameRef}"
-                        
-                        headingLst = ["PART NO", "DESCRIPTION", "D", "CLASS",
-                                      "V", "MAKER", "MAKER SPEC", 
-                                      "D. QTY", "S. QTY", "OH. QTY", "REQ. QTY",
-                                      "PCH. QTY", "BAL. QTY", "RCV. QTY", "OS. QTY",
-                                      "Remark", "Vendor", "Unit Cost", "Total Cost", "Total in SGD"]
-                        
-                        def threeDigitConverter(val):
-                            return val.rjust(3,"0")
-                        
-                        def checkCurrencyNone(num, ccy):
-                            if num == None or num == "":
-                                return num
-                            else:
-                                twoDigit = "{:.2f}".format(num)
-                                numCcy = f"{twoDigit} {ccy}"
-                                return numCcy
-                        
-                        fullLst = []
-                        for i in range(len(result)):
-                            singleLst = [f"{unitFull}-{threeDigitConverter(result[i][1])}", 
-                                         result[i][2], result[i][3], result[i][4],
-                                         result[i][5], result[i][6], result[i][7],
-                                         result[i][8], result[i][9], result[i][10],
-                                         result[i][11], result[i][12], result[i][13],
-                                         result[i][14], result[i][15], result[i][16],
-                                         result[i][17], 
-                                         checkCurrencyNone(result[i][18], result[i][20]),
-                                         checkCurrencyNone(result[i][19], result[i][20]),
-                                         checkCurrencyNone(result[i][22], "SGD")]
-                            fullLst.append(singleLst)
-                        
-                        with open(f"{unitFull}.csv", "w", newline="") as f:
-                            theWriter = csv.writer(f)
-                            theWriter.writerow(headingLst)
-                            for rec in fullLst:
-                                theWriter.writerow(rec)
-
-                        messagebox.showinfo("Export Successful", 
-                                            f"You Have Successfuly Exported {unitFull}", parent=frameAssem) 
+                    
+                    if AuthLevel(Login.AUTHLVL, 1) == False:
+                        messagebox.showerror("Insufficient Clearance",
+                                             "You are NOT authorized to export", parent=frameUnit)
+                    
+                    else:
+                        respExportUnit = messagebox.askokcancel("Confirmation", "Confirm Export as CSV?")
+                        if respExportUnit == True:
+                            curLoad = connLoad.cursor()
+                            curLoad.execute(f"SELECT * FROM {assemRef}")
+                            result = curLoad.fetchall()
+                            connLoad.commit()
+                            curLoad.close()
+                            
+                            unitFull = f"{proName}-{machRef}-{assemTypeRef}{assemNameRef}"
+                            
+                            headingLst = ["PART NO", "DESCRIPTION", "D", "CLASS",
+                                          "V", "MAKER", "MAKER SPEC", 
+                                          "D. QTY", "S. QTY", "OH. QTY", "REQ. QTY",
+                                          "PCH. QTY", "BAL. QTY", "RCV. QTY", "OS. QTY",
+                                          "Remark", "Vendor", "Unit Cost", "Total Cost", "Total in SGD"]
+                            
+                            def threeDigitConverter(val):
+                                return val.rjust(3,"0")
+                            
+                            def checkCurrencyNone(num, ccy):
+                                if num == None or num == "":
+                                    return num
+                                else:
+                                    twoDigit = "{:.2f}".format(num)
+                                    numCcy = f"{twoDigit} {ccy}"
+                                    return numCcy
+                            
+                            fullLst = []
+                            for i in range(len(result)):
+                                singleLst = [f"{unitFull}-{threeDigitConverter(result[i][1])}", 
+                                             result[i][2], result[i][3], result[i][4],
+                                             result[i][5], result[i][6], result[i][7],
+                                             result[i][8], result[i][9], result[i][10],
+                                             result[i][11], result[i][12], result[i][13],
+                                             result[i][14], result[i][15], result[i][16],
+                                             result[i][17], 
+                                             checkCurrencyNone(result[i][18], result[i][20]),
+                                             checkCurrencyNone(result[i][19], result[i][20]),
+                                             checkCurrencyNone(result[i][22], "SGD")]
+                                fullLst.append(singleLst)
+                            
+                            with open(f"{unitFull}.csv", "w", newline="") as f:
+                                theWriter = csv.writer(f)
+                                theWriter.writerow(headingLst)
+                                for rec in fullLst:
+                                    theWriter.writerow(rec)
+    
+                            messagebox.showinfo("Export Successful", 
+                                                f"You Have Successfuly Exported {unitFull}", parent=frameAssem) 
                 
                 def closeTabUnit():
                     respCloseUnit = messagebox.askokcancel("Confirmation",
@@ -4225,6 +4347,9 @@ if Login.AUTH:
                 
                 buttonCloseTabUnit = Button(UnitButtonFrame, text="Close Tab", command=closeTabUnit)
                 buttonCloseTabUnit.grid(row=0, column=10, padx=10, pady=10)
+                
+                if AuthLevel(Login.AUTHLVL, 1) == False:
+                    buttonExportCSVUnit.grid_forget()
     
                 DESBox.bind("<Enter>", NumBoxClick)
                 DESBox.bind("<Leave>", NumBoxClick)
@@ -4751,6 +4876,9 @@ if Login.AUTH:
     
     buttonRefreshPro = Button(proButtonFrame, text="Refresh", command=refreshPro)
     buttonRefreshPro.grid(row=0, column=7, padx=10, pady=10, sticky=W)
+    
+    if AuthLevel(Login.AUTHLVL, 3) == False:
+        buttonDeletePro.grid_forget()
     
     queryTreePro()
     checkEmpPro()
