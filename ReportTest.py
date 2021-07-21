@@ -125,6 +125,20 @@ def openPurchase():
                                        password =logininfo[2],
                                        database= "INDEX_VEND_MASTER")
 
+    #0 BOM Cost
+    #1 Export CSV
+    #2 Total Cost
+    #3 Delete Project
+    #4 Edit Employee
+    #5 Approve PurOrder
+    #6 Generate PurOrder
+    
+    def AuthLevel(Auth, index):
+        AuthDic = {0:[0,0,0,0,0,0,0], 1:[1,1,0,0,0,0,1],
+                   2:[1,1,1,1,0,0,0], 3:[1,1,1,1,1,1,1]}
+        AuthBool = AuthDic.get(Auth)[index]
+        return AuthBool
+
     # Insert Default Company Info
 # =============================================================================
 #     curCom = connCom.cursor()
@@ -1603,6 +1617,10 @@ def openPurchase():
             curPur.close()
             curVend.close()
             
+            # fullPartLst = []
+            # for val in purOrderUnit:
+            #     fullPartLst.append(val[1])
+            
             
 
 
@@ -2544,13 +2562,19 @@ def openPurchase():
                 EmailBox.insert(0, comInfo[0][10])
         
         def updateComInfo():
-            respCompanyInfo = messagebox.askokcancel("Confirmation",
-                                                     "Submit this Info?",
-                                                     parent=comWin)
-            if respCompanyInfo == True:
-                updateComInfoCom()
+            if Login.AUTHLVL == 3 or Login.AUTHLVL == 2:
+                respCompanyInfo = messagebox.askokcancel("Confirmation",
+                                                         "Submit this Info?",
+                                                         parent=comWin)
+                if respCompanyInfo == True:
+                    updateComInfoCom()
+                else:
+                    pass
+            
             else:
-                pass
+                messagebox.showerror("Insufficient Clearance",
+                                     "You Don't Have Enough Clearance for This Action",
+                                     parent=comWin)
         
         def updateComInfoCom():
             curCom = connCom.cursor()
@@ -2602,16 +2626,26 @@ def openPurchase():
                 comWin.destroy()
             
         def clearEntryMWA():
-            ComNameBox.delete(0, END)
-            AddressBox.delete(0, END)
-            CenterABox.delete(0, END)
-            CenterBBox.delete(0, END)
-            BuildingBox.delete(0, END)
-            PosCodeBox.delete(0, END)
-            ComRegNumBox.delete(0, END)
-            BuyerBox.delete(0, END)
-            ContactNumBox.delete(0, END)
-            EmailBox.delete(0, END)
+            if Login.AUTHLVL == 3 or Login.AUTHLVL == 2:
+                ComNameBox.delete(0, END)
+                AddressBox.delete(0, END)
+                CenterABox.delete(0, END)
+                CenterBBox.delete(0, END)
+                BuildingBox.delete(0, END)
+                PosCodeBox.delete(0, END)
+                ComRegNumBox.delete(0, END)
+                BuyerBox.delete(0, END)
+                ContactNumBox.delete(0, END)
+                EmailBox.delete(0, END)
+                
+            else:
+                messagebox.showerror("Insufficient Clearance",
+                                     "You Don't Have Enough Clearance for This Action",
+                                     parent=comWin)
+            
+
+
+
         
         buttonUpdateComInfo = Button(CompanyButtonFrame, 
                                      text="Update Company Information", 
@@ -2623,6 +2657,19 @@ def openPurchase():
         buttonClearEntryInfo.grid(row=0, column=1, padx=10, pady=10)
 
         queryComInfo()
+        
+        if Login.AUTHLVL == 0 or Login.AUTHLVL == 1:
+            ComNameBox.config(state="readonly")
+            AddressBox.config(state="readonly")
+            CenterABox.config(state="readonly")
+            CenterBBox.config(state="readonly")
+            BuildingBox.config(state="readonly")
+            PosCodeBox.config(state="readonly")
+            ComRegNumBox.config(state="readonly")
+            BuyerBox.config(state="readonly")
+            ContactNumBox.config(state="readonly")
+            EmailBox.config(state="readonly")
+            # buttonClearEntryInfo.grid_forget()
     
 
 

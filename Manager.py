@@ -116,6 +116,21 @@ if Login.AUTH:
                                        user = logininfo[1], 
                                        password =logininfo[2],
                                       database= "INDEX_EMP_MASTER")
+    
+    #0 BOM Cost
+    #1 Export CSV
+    #2 Total Cost
+    #3 Delete Project
+    #4 Edit Employee
+    #5 Approve PurOrder
+    #6 Generate PurOrder
+    
+    def AuthLevel(Auth, index):
+        AuthDic = {0:[0,0,0,0,0,0,0], 1:[1,1,0,0,0,0,1],
+                   2:[1,1,1,1,0,0,0], 3:[1,1,1,1,1,1,1]}
+        AuthBool = AuthDic.get(Auth)[index]
+        return AuthBool
+
         
     
 
@@ -181,20 +196,23 @@ if Login.AUTH:
     ProjectTreeView.column("EstCost", anchor = CENTER, width = 95, minwidth = 30)
     ProjectTreeView.column("DateEntry", anchor = CENTER, width = 90, minwidth = 30)
     
-    ProjectTreeView.heading("#0",text = "Index")
-    ProjectTreeView.heading("ProClassID",text = "Project ID")
-    ProjectTreeView.heading("ProName",text = "Project Name")
-    ProjectTreeView.heading("ProManager",text = "Manager")
-    ProjectTreeView.heading("ProSupport",text = "Support")
-    ProjectTreeView.heading("StartDate",text = "Start Date")
-    ProjectTreeView.heading("DeliveryDate",text = "Delivery Date")
-    ProjectTreeView.heading("Lock",text = "Lock")
-    ProjectTreeView.heading("Status",text = "Status")
-    ProjectTreeView.heading("Deleted",text = "Deleted")
-    ProjectTreeView.heading("OnHold",text = "On Hold")
-    ProjectTreeView.heading("EstPart",text = "Est. Part")
-    ProjectTreeView.heading("EstCost",text = "Est. Cost")
-    ProjectTreeView.heading("DateEntry",text = "Date of Entry")
+    ProjectTreeView.heading("#0", text = "Index")
+    ProjectTreeView.heading("ProClassID", text = "Project ID") #0
+    ProjectTreeView.heading("ProName", text = "Project Name") #1
+    ProjectTreeView.heading("ProManager", text = "Manager") #2
+    ProjectTreeView.heading("ProSupport", text = "Support") #3
+    ProjectTreeView.heading("StartDate", text = "Start Date") #4
+    ProjectTreeView.heading("DeliveryDate", text = "Delivery Date") #5
+    ProjectTreeView.heading("Lock", text = "Lock") #6
+    ProjectTreeView.heading("Status", text = "Status") #7
+    ProjectTreeView.heading("Deleted", text = "Deleted") #8
+    ProjectTreeView.heading("OnHold", text = "On Hold") #9
+    ProjectTreeView.heading("EstPart", text = "Est. Part") #10
+    ProjectTreeView.heading("EstCost", text = "Est. Cost") #11
+    ProjectTreeView.heading("DateEntry", text = "Date of Entry") #12
+    
+    if AuthLevel(Login.AUTHLVL, 2) == False:
+        ProjectTreeView.config(displaycolumns = [0,1,2,3,4,5,6,7,8,9,10,12])
     
     
     
@@ -571,78 +589,83 @@ if Login.AUTH:
                     createProCom()                
                 
     def deletePro():
-        respDelPro = messagebox.askokcancel("Confirmation",
-                                            "Delete The Project?", parent=framePro)
-        if respDelPro == True:
-            curMain = connMain.cursor()
-            
-            selected = ProjectTreeView.selection()[0]
-            if selected[0] == "Y":
-                selectAll = ProjectTreeView.get_children(selected)
-                
-                respDelAllPro = messagebox.askokcancel("Confirmation",
-                                                       "Delete ALL Project Under This Year?",
-                                                       parent=framePro)
-                if respDelAllPro == True:
-                    for index in selectAll:
-                        sqlSelect = "SELECT * FROM PROJECT_INFO WHERE oid = %s"
-                        valSelect = (index, )
+        if AuthLevel(Login.AUTHLVL, 3) == False:
+            messagebox.showerror("Insufficient Clearance",
+                                 "You are NOT authorized for this action")
         
-                        curMain.execute(sqlSelect, valSelect)
-                        
-                        recLst = curMain.fetchall()
-                        connMain.commit()
-                    
-                        proID = recLst[0][1]
-                            
-                        sqlDelete = "DELETE FROM PROJECT_INFO WHERE oid = %s"
-                        valDelete = (index, )
-                        curMain.execute(sqlDelete, valDelete)
-                        connMain.commit()
-                        
-                        curInit = connInit.cursor()
-                        curInit.execute(f"DROP DATABASE IF EXISTS `{proID}`")
-                        connInit.commit()
-                        curInit.close()
-                        
-                        clearEntryPro()
-                        ProjectTreeView.delete(*ProjectTreeView.get_children())
-                        queryTreePro()
-                        
-                    messagebox.showinfo("Delete Successful", 
-                                        f"You Have Deleted {len(selectAll)} Projects", parent=framePro) 
-                else:
-                    pass
-    
-            else:
-                sqlSelect = "SELECT * FROM PROJECT_INFO WHERE oid = %s"
-                valSelect = (selected, )
-                curMain.execute(sqlSelect, valSelect)
-                
-                recLst = curMain.fetchall()
-                connMain.commit()
-    
-                proID = recLst[0][1]
-                    
-                sqlDelete = "DELETE FROM PROJECT_INFO WHERE oid = %s"
-                valDelete = (selected, )
-                curMain.execute(sqlDelete, valDelete)
-                connMain.commit()
-                
-                curInit = connInit.cursor()
-                curInit.execute(f"DROP DATABASE IF EXISTS `{proID}`")
-                connInit.commit()
-                curInit.close()
-                
-                clearEntryPro()
-                ProjectTreeView.delete(*ProjectTreeView.get_children())
-                queryTreePro()
-                
-                messagebox.showinfo("Delete Successful", 
-                                    f"You Have Deleted Project {proID}", parent=framePro) 
-            curMain.close()
         else:
-            pass
+            respDelPro = messagebox.askokcancel("Confirmation",
+                                                "Delete The Project?", parent=framePro)
+            if respDelPro == True:
+                curMain = connMain.cursor()
+                
+                selected = ProjectTreeView.selection()[0]
+                if selected[0] == "Y":
+                    selectAll = ProjectTreeView.get_children(selected)
+                    
+                    respDelAllPro = messagebox.askokcancel("Confirmation",
+                                                           "Delete ALL Project Under This Year?",
+                                                           parent=framePro)
+                    if respDelAllPro == True:
+                        for index in selectAll:
+                            sqlSelect = "SELECT * FROM PROJECT_INFO WHERE oid = %s"
+                            valSelect = (index, )
+            
+                            curMain.execute(sqlSelect, valSelect)
+                            
+                            recLst = curMain.fetchall()
+                            connMain.commit()
+                        
+                            proID = recLst[0][1]
+                                
+                            sqlDelete = "DELETE FROM PROJECT_INFO WHERE oid = %s"
+                            valDelete = (index, )
+                            curMain.execute(sqlDelete, valDelete)
+                            connMain.commit()
+                            
+                            curInit = connInit.cursor()
+                            curInit.execute(f"DROP DATABASE IF EXISTS `{proID}`")
+                            connInit.commit()
+                            curInit.close()
+                            
+                            clearEntryPro()
+                            ProjectTreeView.delete(*ProjectTreeView.get_children())
+                            queryTreePro()
+                            
+                        messagebox.showinfo("Delete Successful", 
+                                            f"You Have Deleted {len(selectAll)} Projects", parent=framePro) 
+                    else:
+                        pass
+        
+                else:
+                    sqlSelect = "SELECT * FROM PROJECT_INFO WHERE oid = %s"
+                    valSelect = (selected, )
+                    curMain.execute(sqlSelect, valSelect)
+                    
+                    recLst = curMain.fetchall()
+                    connMain.commit()
+        
+                    proID = recLst[0][1]
+                        
+                    sqlDelete = "DELETE FROM PROJECT_INFO WHERE oid = %s"
+                    valDelete = (selected, )
+                    curMain.execute(sqlDelete, valDelete)
+                    connMain.commit()
+                    
+                    curInit = connInit.cursor()
+                    curInit.execute(f"DROP DATABASE IF EXISTS `{proID}`")
+                    connInit.commit()
+                    curInit.close()
+                    
+                    clearEntryPro()
+                    ProjectTreeView.delete(*ProjectTreeView.get_children())
+                    queryTreePro()
+                    
+                    messagebox.showinfo("Delete Successful", 
+                                        f"You Have Deleted Project {proID}", parent=framePro) 
+                curMain.close()
+            else:
+                pass
         
     def selectPro():
         selected = ProjectTreeView.selection()
@@ -728,9 +751,15 @@ if Login.AUTH:
                 ProEstPartBox.config(state="normal")
                 ProEstPartBox.insert(0, recLst[0][12])
                 ProEstPartBox.config(state="readonly")
-                ProEstCostBox.config(state="normal")
-                ProEstCostBox.insert(0, recLst[0][13])
-                ProEstCostBox.config(state="readonly")
+                
+                if AuthLevel(Login.AUTHLVL, 0) == False:
+                    ProEstCostBox.config(state="normal")
+                    ProEstCostBox.insert(0, "NO AUTH")
+                    ProEstCostBox.config(state="readonly")
+                else:
+                    ProEstCostBox.config(state="normal")
+                    ProEstCostBox.insert(0, recLst[0][13])
+                    ProEstCostBox.config(state="readonly")
                 
                 buttonUpdatePro.config(state=NORMAL)
                 buttonDeletePro.config(state=NORMAL)
@@ -989,20 +1018,23 @@ if Login.AUTH:
         MachTreeView.column("EstCostMach",anchor = CENTER,width = 80, minwidth = 50)
         
         MachTreeView.heading("#0",text = "Index")
-        MachTreeView.heading("MachID",text = "ID")
-        MachTreeView.heading("MachName",text = "Machine Name")
-        MachTreeView.heading("LeadDesigner",text = "Designer")
-        MachTreeView.heading("OrderQty",text = "Order Qty.")
-        MachTreeView.heading("CompQty",text = "Comp. Qty.")
-        MachTreeView.heading("DesDue",text = "Design Due")
-        MachTreeView.heading("DesComp",text = "Design Comp")
-        MachTreeView.heading("NumUA",text = "No. UA")
-        MachTreeView.heading("NumBOMLoad",text = "BOM Load")
-        MachTreeView.heading("Status",text = "Status")
-        MachTreeView.heading("Deleted",text = "Deleted")
-        MachTreeView.heading("OnHold",text = "On Hold")
-        MachTreeView.heading("EstPartMach",text = "Est. Part")
-        MachTreeView.heading("EstCostMach",text = "Est. Cost")
+        MachTreeView.heading("MachID",text = "ID") #0
+        MachTreeView.heading("MachName",text = "Machine Name") #1
+        MachTreeView.heading("LeadDesigner",text = "Designer") #2
+        MachTreeView.heading("OrderQty",text = "Order Qty.") #3
+        MachTreeView.heading("CompQty",text = "Comp. Qty.") #4
+        MachTreeView.heading("DesDue",text = "Design Due") #5
+        MachTreeView.heading("DesComp",text = "Design Comp") #6
+        MachTreeView.heading("NumUA",text = "No. UA") #7
+        MachTreeView.heading("NumBOMLoad",text = "BOM Load") #8
+        MachTreeView.heading("Status",text = "Status") #9
+        MachTreeView.heading("Deleted",text = "Deleted") #10
+        MachTreeView.heading("OnHold",text = "On Hold") #11
+        MachTreeView.heading("EstPartMach",text = "Est. Part") #12
+        MachTreeView.heading("EstCostMach",text = "Est. Cost") #13
+        
+        if AuthLevel(Login.AUTHLVL, 2) == False:
+            MachTreeView.config(displaycolumns = [0,1,2,3,4,5,6,7,8,9,10,11,12])
     
         MachDataFrame = LabelFrame(frameMach, text="Record")
         MachDataFrame.grid(row=2, column=0, padx=20, pady=5, ipadx=5, ipady=5, sticky=W+E)
@@ -1601,9 +1633,15 @@ if Login.AUTH:
                 MachEstPartBox.config(state="normal")
                 MachEstPartBox.insert(0, recLst[0][14])
                 MachEstPartBox.config(state="readonly")
-                MachEstCostBox.config(state="normal")
-                MachEstCostBox.insert(0, recLst[0][15])
-                MachEstCostBox.config(state="readonly")
+                
+                if AuthLevel(Login.AUTHLVL, 2) == False:
+                    MachEstCostBox.config(state="normal")
+                    MachEstCostBox.insert(0, "NO AUTH")
+                    MachEstCostBox.config(state="readonly")
+                else:
+                    MachEstCostBox.config(state="normal")
+                    MachEstCostBox.insert(0, recLst[0][15])
+                    MachEstCostBox.config(state="readonly")
                 
                 buttonUpdateMach.config(state=NORMAL)
                 buttonCreateMach.config(state=DISABLED)
@@ -1644,7 +1682,7 @@ if Login.AUTH:
             
             MachOrderBox.config(state="normal")
             MachOrderBox.delete(0, END)
-            MachOrderBox.insert(0, 0)
+            MachOrderBox.insert(0, 1)
             MachOrderBox.config(state="readonly")
             MachCompBox.config(state="normal")
             MachCompBox.delete(0, END)
@@ -1783,22 +1821,25 @@ if Login.AUTH:
             AssemTreeView.column("ApproxCost", anchor=CENTER, width=80)
             
             AssemTreeView.heading("#0", text="Index", anchor=CENTER)
-            AssemTreeView.heading("Num", text="No.", anchor=CENTER)
-            AssemTreeView.heading("Description", text="Description", anchor=CENTER)
-            AssemTreeView.heading("Design", text="Design", anchor=CENTER)
-            AssemTreeView.heading("Purchase", text="Purchase", anchor=CENTER)
-            AssemTreeView.heading("Assembly", text="Assembly", anchor=CENTER)
-            AssemTreeView.heading("Designer", text="Designer", anchor=CENTER)
-            AssemTreeView.heading("Locker", text="Locker", anchor=CENTER)
-            AssemTreeView.heading("Approved", text="Appd.", anchor=CENTER)
-            AssemTreeView.heading("Num of Parts", text="Required", anchor=CENTER)
-            AssemTreeView.heading("Parts Purchased", text="Purchased", anchor=CENTER)
-            AssemTreeView.heading("Parts Received", text="Received", anchor=CENTER)
-            AssemTreeView.heading("Deleted", text="Deleted", anchor=CENTER)
-            AssemTreeView.heading("OnHold", text="On Hold", anchor=CENTER)
-            AssemTreeView.heading("DesQty", text="Des. Qty", anchor=CENTER)
-            AssemTreeView.heading("CompQty", text="Comp. Qty", anchor=CENTER)
-            AssemTreeView.heading("ApproxCost", text="Est. Cost", anchor=CENTER)
+            AssemTreeView.heading("Num", text="No.", anchor=CENTER) #0
+            AssemTreeView.heading("Description", text="Description", anchor=CENTER) #1
+            AssemTreeView.heading("Design", text="Design", anchor=CENTER) #2
+            AssemTreeView.heading("Purchase", text="Purchase", anchor=CENTER) #3
+            AssemTreeView.heading("Assembly", text="Assembly", anchor=CENTER) #4
+            AssemTreeView.heading("Designer", text="Designer", anchor=CENTER) #5
+            AssemTreeView.heading("Locker", text="Locker", anchor=CENTER) #6
+            AssemTreeView.heading("Approved", text="Appd.", anchor=CENTER) #7
+            AssemTreeView.heading("Num of Parts", text="Required", anchor=CENTER) #8
+            AssemTreeView.heading("Parts Purchased", text="Purchased", anchor=CENTER) #9
+            AssemTreeView.heading("Parts Received", text="Received", anchor=CENTER) #10
+            AssemTreeView.heading("Deleted", text="Deleted", anchor=CENTER) #11
+            AssemTreeView.heading("OnHold", text="On Hold", anchor=CENTER) #12
+            AssemTreeView.heading("DesQty", text="Des. Qty", anchor=CENTER) #13
+            AssemTreeView.heading("CompQty", text="Comp. Qty", anchor=CENTER) #14
+            AssemTreeView.heading("ApproxCost", text="Est. Cost", anchor=CENTER) #15
+            
+            if AuthLevel(Login.AUTHLVL, 2) == False:
+                AssemTreeView.config(displaycolumns = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14])
     
 
 
@@ -2609,9 +2650,14 @@ if Login.AUTH:
                     CompletedBox.insert(0, recLst[0][24])
                     CompletedBox.config(state="readonly")
                     
-                    EstCostAssemBox.config(state="normal")
-                    EstCostAssemBox.insert(0, recLst[0][25])
-                    EstCostAssemBox.config(state="readonly")
+                    if AuthLevel(Login.AUTHLVL, 2) == False:
+                        EstCostAssemBox.config(state="normal")
+                        EstCostAssemBox.insert(0, "NO AUTH")
+                        EstCostAssemBox.config(state="readonly")
+                    else:
+                        EstCostAssemBox.config(state="normal")
+                        EstCostAssemBox.insert(0, recLst[0][25])
+                        EstCostAssemBox.config(state="readonly")
                     
                     buttonUpdateAssem.config(state=NORMAL)
                     buttonCreateAssem.config(state=DISABLED)
@@ -2687,7 +2733,7 @@ if Login.AUTH:
 
                 DesignQtyBox.config(state="normal")
                 DesignQtyBox.delete(0, END)
-                DesignQtyBox.insert(0, 0)
+                DesignQtyBox.insert(0, 1)
                 DesignQtyBox.config(state="readonly")
                 CompletedBox.config(state="normal")
                 CompletedBox.delete(0, END)
@@ -3951,8 +3997,11 @@ if Login.AUTH:
                     ExitButton.grid(row = 2, column = 2)
   
 
-
+                
                 def NumBoxClick(e):
+                    NumBoxCom()
+                    
+                def NumBoxCom():
                     DESVal = int(DESBox.get())
                     SPAVal = int(SPABox.get())
                     DesQtyVal = int(desQty)
@@ -4021,7 +4070,23 @@ if Login.AUTH:
                         RemarkBox.delete(0, END)
                     else:
                         RemarkBox.config(state="readonly")
-                
+                    
+                def setPCHAll(e):
+                    ReqQty = REQBox.get()
+                    PCHBox.delete(0, END)
+                    PCHBox.insert(0, ReqQty)
+                    NumBoxCom()
+                    
+                def setRCVAll(e):
+                    PchQty = PCHBox.get()
+                    RCVBox.delete(0, END)
+                    RCVBox.insert(0, PchQty)
+                    NumBoxCom()
+
+
+
+
+
                 UnitDataFrame = LabelFrame(frameUnit, text="Record")
                 UnitDataFrame.grid(row=2, column=0, padx=20, pady=5, ipadx=5, ipady=5, sticky=W+E)
                 # UnitDataFrame.pack(fill="x", expand="yes", padx=20)
@@ -4172,8 +4237,13 @@ if Login.AUTH:
                 RCVBox.bind("<Enter>", NumBoxClick)
                 RCVBox.bind("<Leave>", NumBoxClick)
                 
+                PCHBox.bind("<Double-Button-3>", setPCHAll)
+                RCVBox.bind("<Double-Button-3>", setRCVAll)
+                
                 RemarkBox.bind("<<ComboboxSelected>>", RemarkSelect)
                 CurrencyUnitBox.bind("<<ComboboxSelected>>", CurrencyUnitSelect)
+                
+                
     
                 queryTreeUnit()
 
@@ -4308,6 +4378,13 @@ if Login.AUTH:
             DesignApprovedBox.current(0)
             ApproveNameBox.current(0)
             
+            DesignQtyBox.config(state="normal")
+            DesignQtyBox.delete(0, END)
+            DesignQtyBox.insert(0,1)
+            DesignQtyBox.config(state="readonly")
+            
+            
+            
             TypeBox.grid(row=0, column=1, columnspan=2, padx=10, pady=2, sticky=W)
             DesignBox.grid(row=0, column=6, padx=10, pady=2, sticky=W)
             PurchaseBox.grid(row=0, column=8, padx=10, pady=2, sticky=W)
@@ -4426,6 +4503,12 @@ if Login.AUTH:
         MachStatusBox.current(0)
         MachDesignerBox.current(0)
         MachLockerBox.current(0)
+        
+        MachOrderBox.config(state="normal")
+        MachOrderBox.delete(0, END)
+        MachOrderBox.insert(0,1)
+        MachOrderBox.config(state="readonly")
+
         
         
         
