@@ -297,7 +297,7 @@ CreateVendDatabase = ["""
                       """
                       CREATE TABLE IF NOT EXISTS `INDEX_VEND_MASTER`.`VENDOR_LIST`
                       (`oid` INT AUTO_INCREMENT PRIMARY KEY,
-                       `VENDOR_NAME` VARCHAR(20),
+                       `VENDOR_NAME` VARCHAR(20) UNIQUE KEY,
                        `CLASS` VARCHAR(10),
                        `COMPANY_NAME` VARCHAR(100),
                        `COMPANY_COUNTRY` VARCHAR(50),

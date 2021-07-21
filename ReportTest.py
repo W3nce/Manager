@@ -130,7 +130,7 @@ def openPurchase():
     #2 Total Cost
     #3 Delete Project
     #4 Edit Employee
-    #5 Approve PurOrder
+    #5 Approve PurOrder # USED TO UNLOCK COMPLETED ORDER
     #6 Generate PurOrder
     
     def AuthLevel(Auth, index):
@@ -1003,7 +1003,7 @@ def openPurchase():
         TransCcyBox.current(0)
         TransExRateBox.config(state="normal")
         TransExRateBox.delete(0, END)
-        TransExRateBox.insert(0, 1)
+        TransExRateBox.insert(0, 1.0)
         TransExRateBox.config(state="readonly")        
         
         VendorRemarkBox.config(state="normal")
@@ -1599,6 +1599,38 @@ def openPurchase():
 
 
         def genPurOrder():
+            if AuthLevel(Login.AUTHLVL, 6) == False:
+                messagebox.showerror("Insufficient Clearance",
+                                     "You are NOT authorized to generate Purchase Order",
+                                     parent=RepWin)
+            else:
+                curPur = connPur.cursor() 
+                curPur.execute(f"SELECT * FROM PUR_ORDER_LIST WHERE PurOrderNum = '{PurOrderNumRef}'")
+                PurInfo = curPur.fetchall()
+                curPur.close()
+                
+                if PurInfo[0][8] == 0:
+                    messagebox.showerror("Unable to Generate",
+                                         "This order has YET to be Approved",
+                                         parent=RepWin)
+                elif PurInfo[0][8] == 2:
+                    messagebox.showerror("Unable to Generate",
+                                         "This order has been REJECTED",
+                                         parent=RepWin)
+                
+                else:
+                    if PurInfo[0][8] == 1:
+                        respGenOrder = messagebox.askokcancel("Already Generated Before",
+                                                              "Generate this order AGAIN?",
+                                                              parent=RepWin)
+                        if respGenOrder == True:
+                            genPurOrderCom()
+                        else:
+                            pass
+                    else:
+                        genPurOrderCom()
+
+        def genPurOrderCom():
             curCom = connCom.cursor()
             curCom.execute("SELECT * FROM COMPANY_MWA")
             companyInfo = curCom.fetchall()
@@ -1614,10 +1646,13 @@ def openPurchase():
             curVend.execute(f"SELECT * FROM VENDOR_LIST WHERE VENDOR_NAME = '{VendorRef}'")
             vendorInfo = curVend.fetchall()
             
+            curCom.close()
             curPur.close()
             curVend.close()
             
             # fullPartLst = []
+            # ProLst = []
+            
             # for val in purOrderUnit:
             #     fullPartLst.append(val[1])
             
@@ -2442,11 +2477,20 @@ def openPurchase():
             pass
     
     def ApproveStatSelect(e):
+        ProgressVal = ProgressStatBox.current()
         ApproveVal = ApproveStatBox.current()
-        if ApproveVal == 0:
-            IssueStatBox.current(0)
-        else:
-            pass
+        if ProgressVal == 0:
+            if ApproveVal == 1 or ApproveVal == 2:
+                ApproveStatBox.current(0)
+                messagebox.showerror("Error",
+                                     "You are NOT ALLOWED to change Approval Status when incomplete",
+                                     parent=RepWin)
+            
+            else:
+                if ApproveVal == 0:
+                    IssueStatBox.current(0)
+                else:
+                    pass
     
     ProgressStatBox.bind("<<ComboboxSelected>>", ProgressStatSelect)
     ApproveStatBox.bind("<<ComboboxSelected>>", ApproveStatSelect)
@@ -2681,7 +2725,7 @@ def openPurchase():
     fileMenu.add_command(label="Edit Company Info", command=editCompanyInfo)
     fileMenu.add_separator()
     fileMenu.add_command(label="Exit", command=RepWin.destroy)
-
+    
     queryTreeOrder()
     
     

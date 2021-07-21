@@ -3301,8 +3301,117 @@ if Login.AUTH:
                                                 f"You Have Updated Part {PartNum}", parent=frameUnit) 
                         else:
                             pass
-                    
+                
                 def createUnit():
+                    if AuthLevel(Login.AUTHLVL, 0) == False:
+                        createUnitNoCost()
+                    else:
+                        createUnitCost()
+                
+                def createUnitNoCost():
+                    assemRef = assemFullName
+                    
+                    createUnitFormat = True
+                    try:
+                        int(PartNumBox.get())
+                    except:
+                        createUnitFormat = False
+                    
+                    if PartNumBox.get() == "":
+                        messagebox.showerror("Unable to Create Unit",
+                                             "Please Key In a Part Number",
+                                             parent=frameUnit)
+                        
+                    elif createUnitFormat == False:
+                        messagebox.showerror("Incorrect Part Number Format",
+                                             "Please Key in an Integer",
+                                             parent=frameUnit)
+                    
+                    else:
+                        respCreateUnit = messagebox.askokcancel("Confirmation",
+                                                                "Add New Part?",
+                                                                parent=frameUnit)
+                        if respCreateUnit == True:
+                            sqlCommand = f"""INSERT INTO `{assemRef}` (
+                            PartNum, Description, D, CLS, V,
+                            Maker, Spec, DES, SPA, OH, REQ,
+                            PCH, BAL, RCV, OS, REMARK, Vendor, UnitCost, 
+                            TotalUnitCost, Currency, ExchangeRate, TotalSGD)
+                    
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, 
+                                    %s, %s, %s, %s, %s, %s, %s, 
+                                    %s, %s, %s, %s, %s, %s, %s, %s)"""
+                            
+                            def sumTotalCost(unit, num):
+                                if unit == None or unit == "":
+                                    return 0
+                                else:
+                                    return unit * num
+        
+                            def checkCost(cost):
+                                if cost == "":
+                                    return None
+                                else:
+                                    return float(cost)
+         
+                            def totalSGDConvert(totalVal, exRate):
+                                if exRate == None or exRate == "":
+                                    return 0
+                                else:
+                                    totalSGDVal = float(totalVal) * float(exRate)
+                                    return round(totalSGDVal, 2)
+                            
+                            DLst = ["", "D"]
+                            
+                            PartNum = str(PartNumBox.get()).rjust(3,"0")
+                            Description = DescriptionBox.get().upper()
+                            D = DLst[DBox.current()]
+                            CLS = CLSBox.get()
+                            V = VBox.get()
+                            Maker = MakerBox.get()
+                            Spec = SpecBox.get().upper()
+    
+                            DES = int(DESBox.get())
+                            SPA = int(SPABox.get())
+                            OH = int(OHBox.get())
+                            REQ = int(REQBox.get())
+                            PCH = int(PCHBox.get())
+                            BAL = int(BALBox.get())
+                            RCV = int(RCVBox.get())
+                            OS = int(OSBox.get())
+                            Remark = RemarkBox.get()
+                            Vendor = VendorBox.get()
+                            
+                            UnitCost = None
+                            TotalUnitCost = sumTotalCost(UnitCost, REQ)
+                            Currency = "SGD"
+                            ExchangeRate = 1.0
+                            TotalSGD = totalSGDConvert(TotalUnitCost, ExchangeRate)
+                            
+                            values = (PartNum, Description, D, CLS, V, Maker, Spec,
+                                      DES, SPA, OH, REQ, PCH, BAL, RCV, OS, Remark,
+                                      Vendor, UnitCost, TotalUnitCost, Currency,
+                                      ExchangeRate, TotalSGD)
+                        
+                            curLoad = connLoad.cursor()
+                            curLoad.execute(sqlCommand, values)
+                            connLoad.commit()
+                            curLoad.close()
+                            
+                            clearEntryUnit()
+                            UnitTreeView.delete(*UnitTreeView.get_children())
+                            queryTreeUnit()
+                            
+                            checkAssemTotal()
+                            checkMachTotal()
+                            checkProTotal()
+                            
+                            messagebox.showinfo("Creation Successful",
+                                                f"New Part {PartNum} Added", parent=frameUnit)
+                        else:
+                            pass                        
+
+                def createUnitCost():
                     assemRef = assemFullName
                     
                     createUnitFormat = True
@@ -4217,27 +4326,48 @@ if Login.AUTH:
                 UnitButtonFrame.grid(row=3, column=0, padx=20, pady=5, ipadx=5, ipady=5, sticky=W+E)
                 # UnitButtonFrame.pack(fill="x", expand="yes", padx=20)
     
-                PartNumLabel = Label(UnitDataFrame, text="Part No.").grid(row=0, column=0, padx=10, sticky=E)
-                DescriptionLabel = Label(UnitDataFrame, text="Description").grid(row=1, column=0, padx=10, sticky=E)
-                DLabel = Label(UnitDataFrame, text="D").grid(row=2, column=0, padx=10, sticky=E)
-                VLabel = Label(UnitDataFrame, text="V").grid(row=3, column=0, padx=10, sticky=E)
-                MakerLabel = Label(UnitDataFrame, text="Maker").grid(row=0, column=2, padx=10, sticky=E)
-                SpecLabel = Label(UnitDataFrame, text="Specification").grid(row=1, column=2, padx=10, sticky=E)
-                CLSLabel = Label(UnitDataFrame, text="Class").grid(row=2, column=2, padx=10, sticky=E)
-                RemarkLabel = Label(UnitDataFrame, text="Remark").grid(row=3, column=2, padx=10, sticky=E)
-                DESLabel = Label(UnitDataFrame, text="Design Qty.").grid(row=0, column=4, padx=10, sticky=E)
-                SPALabel = Label(UnitDataFrame, text="Spare Qty.").grid(row=1, column=4, padx=10, sticky=E)
-                OHLabel = Label(UnitDataFrame, text="On Hand Qty.").grid(row=2, column=4, padx=10, sticky=E)
-                REQLabel = Label(UnitDataFrame, text="Required Qty.").grid(row=3, column=4, padx=10, sticky=E)
-                PCHLabel = Label(UnitDataFrame, text="Purchased Qty.").grid(row=0, column=6, padx=10, sticky=E)
-                BALLabel = Label(UnitDataFrame, text="Balance Qty.").grid(row=1, column=6, padx=10, sticky=E)
-                RCVLabel = Label(UnitDataFrame, text="Received Qty.").grid(row=2, column=6, padx=10, sticky=E)
-                OSLabel = Label(UnitDataFrame, text="Outstanding Qty.").grid(row=3, column=6, padx=10, sticky=E)
-                VendorLabel = Label(UnitDataFrame, text="Vendor").grid(row=0, column=8, padx=10, sticky=E)
-                UnitCostLabel = Label(UnitDataFrame, text="Unit Cost").grid(row=1, column=8, padx=10, sticky=E)
-                TotalUnitCostLabel = Label(UnitDataFrame, text="Total Cost").grid(row=2, column=8, padx=10, sticky=E)
-                CurrencyUnitLabel = Label(UnitDataFrame, text="Currency").grid(row=3, column=8, padx=10, sticky=E)
+                PartNumLabel = Label(UnitDataFrame, text="Part No.")
+                DescriptionLabel = Label(UnitDataFrame, text="Description")
+                DLabel = Label(UnitDataFrame, text="D")
+                VLabel = Label(UnitDataFrame, text="V")
+                MakerLabel = Label(UnitDataFrame, text="Maker")
+                SpecLabel = Label(UnitDataFrame, text="Specification")
+                CLSLabel = Label(UnitDataFrame, text="Class")
+                RemarkLabel = Label(UnitDataFrame, text="Remark")
+                DESLabel = Label(UnitDataFrame, text="Design Qty.")
+                SPALabel = Label(UnitDataFrame, text="Spare Qty.")
+                OHLabel = Label(UnitDataFrame, text="On Hand Qty.")
+                REQLabel = Label(UnitDataFrame, text="Required Qty.")
+                PCHLabel = Label(UnitDataFrame, text="Purchased Qty.")
+                BALLabel = Label(UnitDataFrame, text="Balance Qty.")
+                RCVLabel = Label(UnitDataFrame, text="Received Qty.")
+                OSLabel = Label(UnitDataFrame, text="Outstanding Qty.")
+                VendorLabel = Label(UnitDataFrame, text="Vendor")
+                UnitCostLabel = Label(UnitDataFrame, text="Unit Cost")
+                TotalUnitCostLabel = Label(UnitDataFrame, text="Total Cost")
+                CurrencyUnitLabel = Label(UnitDataFrame, text="Currency")
             
+                PartNumLabel.grid(row=0, column=0, padx=10, sticky=E)
+                DescriptionLabel.grid(row=1, column=0, padx=10, sticky=E)
+                DLabel.grid(row=2, column=0, padx=10, sticky=E)
+                VLabel.grid(row=3, column=0, padx=10, sticky=E)
+                MakerLabel.grid(row=0, column=2, padx=10, sticky=E)
+                SpecLabel.grid(row=1, column=2, padx=10, sticky=E)
+                CLSLabel.grid(row=2, column=2, padx=10, sticky=E)
+                RemarkLabel.grid(row=3, column=2, padx=10, sticky=E)
+                DESLabel.grid(row=0, column=4, padx=10, sticky=E)
+                SPALabel.grid(row=1, column=4, padx=10, sticky=E)
+                OHLabel.grid(row=2, column=4, padx=10, sticky=E)
+                REQLabel.grid(row=3, column=4, padx=10, sticky=E)
+                PCHLabel.grid(row=0, column=6, padx=10, sticky=E)
+                BALLabel.grid(row=1, column=6, padx=10, sticky=E)
+                RCVLabel.grid(row=2, column=6, padx=10, sticky=E)
+                OSLabel.grid(row=3, column=6, padx=10, sticky=E)
+                VendorLabel.grid(row=0, column=8, padx=10, sticky=E)
+                UnitCostLabel.grid(row=1, column=8, padx=10, sticky=E)
+                TotalUnitCostLabel.grid(row=2, column=8, padx=10, sticky=E)
+                CurrencyUnitLabel.grid(row=3, column=8, padx=10, sticky=E)
+                
                 PartNumBox = Entry(UnitDataFrame)
                 DescriptionBox = Entry(UnitDataFrame)
                 DBox = ttk.Combobox(UnitDataFrame, width=8, 
@@ -4315,6 +4445,21 @@ if Login.AUTH:
                 CurrencyUnitBox.grid(row=3, column=9, pady=5, sticky=W)
                 ExRateBox.grid(row=3, column=11, padx=5, pady=5, sticky=W)
                 
+                # if AuthLevel(Login.AUTHLVL, 0) == False:
+                #     UnitCostLabel.grid_forget()
+                #     # TotalUnitCostLabel
+                #     # CurrencyUnitLabel
+                #     # UnitCostBox
+                #     # UnitCostCcyLabel
+                #     # TotalUnitCostBox
+                #     # TotalUnitCostCcyLabel
+                #     # CurrencyUnitBox
+                #     # EqualLabel
+                #     # ExRateBox
+                #     # SGDLabel
+                    
+                    
+                    
                 buttonUpdateUnit = Button(UnitButtonFrame, text="Update Unit", command=updateUnit, state=DISABLED)
                 buttonUpdateUnit.grid(row=0, column=0, padx=10, pady=10)
                 
@@ -4843,6 +4988,10 @@ if Login.AUTH:
     helpMenu = Menu(menuBar, tearoff=0)
     menuBar.add_cascade(label="Help", menu=helpMenu)
     helpMenu.add_command(label="Instructions", command=Instruction.openInstruction)    
+    
+    if AuthLevel(Login.AUTHLVL, 6) == False:
+        ProcurementMenu.entryconfig("Generate Purchase Order", state="disabled")
+        ProcurementMenu.entryconfig("Generate RFQ", state="disabled")
     
     
     
