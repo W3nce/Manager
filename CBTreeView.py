@@ -7,8 +7,7 @@ from PIL import Image, ImageTk
 from tkinter import messagebox 
 import CountryRef
 
-TreeViewSAVED = 0
-RFQIssued = 0
+
 
 
 IM_CHECKED = os.path.join(os.path.join(os.getcwd(),'icons'), "checked.png")      
@@ -19,7 +18,11 @@ IM_UNCHECKED = os.path.join(os.path.join(os.getcwd(),'icons'), "unchecked.png")
 
 class CbTreeview(ttk.Treeview):
     
-    def __init__(self, master=None, **kw):
+    def __init__(self, master=None,TotalSGDBox = None, **kw):
+        self.TotalSGDBox = TotalSGDBox
+        self.TreeViewSAVED = 0
+        self.RFQIssued = 0
+        self.TOTAL_TCURR = 0
         
         self.root = master
         kw.setdefault('style', 'cb.Treeview')
@@ -61,39 +64,39 @@ class CbTreeview(ttk.Treeview):
         tags.remove(tag)
         self.item(item, tags=tags)
 
-    def insert(self, parent, index, iid=None, **kw):
+    def insert(self, parent, index, iid=None,checked = False, **kw):
         item = ttk.Treeview.insert(self, parent, index, iid, **kw)
-        self.tag_add(item, (item, 'unchecked'))
+        if checked:
+            self.tag_add(item, (item, 'checked'))
+        else:
+            self.tag_add(item, (item, 'unchecked'))
         self.tag_bind(item, '<ButtonRelease-1>',
                       lambda event: self._on_click(event, item))
         
         self.tag_bind(item, '<Double-Button-1>',
                       lambda event: self.onDoubleClick(event))
         #self.tag_bind(item, '<Tab>', self.onTabKey)
+        self.TreeViewSAVED = 0
         
     def _on_click(self, event, item):
-        global TreeViewSAVED,RFQIssued
 
         """Handle click on items."""
         if self.identify_row(event.y) == item:
             if self.identify_column(event.x) == '#16': # click in 'Served' column
                 # toggle checkbox image
-                if RFQIssued: 
+                if self.RFQIssued: 
                     if self.tag_has('checked', item):
                         self.tag_remove(item, 'checked')
                         self.tag_add(item, ('unchecked',))
                     else:
                         self.tag_remove(item, 'unchecked')
                         self.tag_add(item, ('checked',))
-                    TreeViewSAVED = 0
+                    self.TreeViewSAVED = 0
                 else :
                     messagebox.showerror('Confirm Purchase' ,'RFQ not issued!',parent = self.root)            
         
-    def onDoubleClick(self, event):
-        global TreeViewSAVED,RFQIssued
-       
-            
-        TreeViewSAVED = 0
+    def onDoubleClick(self, event):            
+        self.TreeViewSAVED = 0
         ''' Executed, when a row is double-clicked. Opens 
         read-only EntryPopup above the item's column, so it is possible
         to select text '''
@@ -109,7 +112,7 @@ class CbTreeview(ttk.Treeview):
         EntryWidth = 0.785 * FullWidth - 23
         
         if column == '#13': 
-            if RFQIssued:
+            if self.RFQIssued:
                 pass
             else:
                 if messagebox.askyesno('Edit Unit Price' ,'RFQ not issued!\nDo you want to Continue?',parent = self.root):
@@ -132,38 +135,51 @@ class CbTreeview(ttk.Treeview):
             self.entryPopup.place( x=int(EntryWidth), y=y+pady, anchor=tk.W, width = int(0.102*EntryWidth - 20))
             
     def CheckUncheckAll(self):
-        print(RFQIssued)
         if self.get_children():
             pass
         else:
             messagebox.showerror('Confirm Purchase' ,'No Parts in RFQ!',parent = self.root)  
             return
         
-        if RFQIssued:
-            for line in self.get_children():
-                if self.tag_has('checked', line):
-                    self.tag_remove(line, 'checked')
-                    self.tag_add(line, ('unchecked',))
-                else:
-                    self.tag_remove(line, 'unchecked')
-                    self.tag_add(line, ('checked',))
+        if self.RFQIssued:
+            if all([self.tag_has('checked', line) for line in self.get_children()]):
+                for line in self.get_children():
+                    if self.tag_has('checked', line):
+                        self.tag_remove(line, 'checked')
+                        self.tag_add(line, ('unchecked',))
+            else:
+                for line in self.get_children():
+                    if self.tag_has('unchecked', line):
+                        self.tag_remove(line, 'unchecked')
+                        self.tag_add(line, ('checked',))
+                
         else :
             messagebox.showerror('Confirm Purchase' ,'RFQ not issued!',parent = self.root)   
      
     def CalLineTotalPrice(self):
+        self.TOTAL_TCURR = 0 
+        
+        Total_SGD = 0
+        
         if self.get_children():
             for iid in self.get_children():
                 newrow = list(self.item(iid,'values')).copy()
-                newrow[14] = "{:.2f}".format(round(int(newrow[10])* float(newrow[12]),2))
-                self.item(iid, values=tuple(newrow))
-        else:
-             messagebox.showerror('Calculate All Lines' ,'No Parts in RFQ',parent = self.root)
-
+                if (newrow[12] == 'None' or newrow[12] ==''):
+                    pass
+                else:
+                    newrow[12] =  "{:.2f}".format(round( float(newrow[12]),2))  
+                    newrow[14] =  "{:.2f}".format(round(int(newrow[10])* float(newrow[12]),2))
+                    LINE_TCURR = round(int(newrow[10])* float(newrow[12]),2)
+                    self.TOTAL_TCURR += LINE_TCURR
+                    Total_SGD += LINE_TCURR * float(CountryRef.getExRate(newrow[13]))
+                    self.item(iid, values=tuple(newrow))
+        self.TotalSGDBox.config(state="normal")
+        self.TotalSGDBox.delete(0, tk.END)
+        self.TotalSGDBox.insert(0, "{:.2f}".format(round(Total_SGD,2)) )
+        self.TotalSGDBox.config(state="readonly")
         
 class EntryPopup(tk.Entry):
     
-    
-
     def __init__(self, parent, iid, text, **kw):
         ''' If relwidth is set, then width is ignored '''
         super().__init__(parent, **kw)
@@ -196,13 +212,16 @@ class EntryPopup(tk.Entry):
                 messagebox.showinfo('Edit Unit Price', 'Do you wish to keep \nUnit Price as None?')
             else :
                 messagebox.showerror('Edit Unit Price', 'Invalid Entry for Unit Price')
+                return
             
 
         newrow = self.tv.item(self.iid)['values'].copy()
-        newrow[12] = self.get()
-        newrow[14] = "{:.2f}".format(round(int(newrow[10])* float(newrow[12]),2))
+        newrow[12] = "{:.2f}".format(round(float(self.get()),2))
+        newrow[14] = "{:.2f}".format(round(float(newrow[10])* float(newrow[12]),2))
         self.tv.item(self.iid, values=newrow)
+        self.tv.CalLineTotalPrice()
         self.destroy()
+        
 
     def select_all(self, *ignore):
         ''' Set selection on the whole text '''
