@@ -602,7 +602,13 @@ def openEmployee():
         queryTreeEmp()
     
     def closeEmp():
-        EmpWin.destroy()
+        respCloseEmp = messagebox.askokcancel("Confirmation",
+                                              "Close Employee Window?",
+                                              parent=EmpWin)
+        if respCloseEmp == True:
+            EmpWin.destroy()
+        else:
+            pass
     
     EmpDataFrame = LabelFrame(EmpWin, text="Record")
     EmpDataFrame.grid(row=2, column=0, padx=20, pady=5, ipadx=5, ipady=5, sticky=W+E)

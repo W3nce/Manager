@@ -229,7 +229,9 @@ def openCurrency():
         formatDate = timeNow.strftime("%Y-%m-%d")
         
         selected = CcyTreeView.selection()[0]
+        print(selected)
         CcyCode = CcyTreeView.item(selected)["values"][0]
+        print(CcyCode)
         
         updateCcyCom = f"""UPDATE `CCY_LIST` SET
         CcyAcro = %s,
