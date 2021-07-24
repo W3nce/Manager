@@ -21,6 +21,7 @@ if Login.AUTH:
     import Vendor
     import RFQ
     import ReportTest
+    import StockTest
     import Instruction
 
 # FIRST LAYER framePro, frameBOM etc. (Represent the Tabs)
@@ -757,10 +758,8 @@ if Login.AUTH:
                 ProEstPartBox.insert(0, recLst[0][12])
                 ProEstPartBox.config(state="readonly")
                 
-                if AuthLevel(Login.AUTHLVL, 0) == False:
-                    ProEstCostBox.config(state="normal")
-                    ProEstCostBox.insert(0, "NO AUTH")
-                    ProEstCostBox.config(state="readonly")
+                if AuthLevel(Login.AUTHLVL, 2) == False:
+                    pass
                 else:
                     ProEstCostBox.config(state="normal")
                     ProEstCostBox.insert(0, recLst[0][13])
@@ -960,7 +959,8 @@ if Login.AUTH:
         
         frameMach.columnconfigure(0, weight=1)
         
-        tabNote.select(1)
+        tabObjDict = tabNote.children
+        tabNote.select(len(tabObjDict)-1)
     
     
     
@@ -1640,9 +1640,7 @@ if Login.AUTH:
                 MachEstPartBox.config(state="readonly")
                 
                 if AuthLevel(Login.AUTHLVL, 2) == False:
-                    MachEstCostBox.config(state="normal")
-                    MachEstCostBox.insert(0, "NO AUTH")
-                    MachEstCostBox.config(state="readonly")
+                    pass
                 else:
                     MachEstCostBox.config(state="normal")
                     MachEstCostBox.insert(0, recLst[0][15])
@@ -1766,7 +1764,9 @@ if Login.AUTH:
             frameAssem = Frame(tabNote)
             tabNote.add(frameAssem, text="Assembly Selection")
             frameAssem.columnconfigure(0, weight=1)
-            tabNote.select(2)
+                    
+            tabObjDict = tabNote.children
+            tabNote.select(len(tabObjDict)-1)
            
             style = ttk.Style()
             style.theme_use("clam")
@@ -2656,9 +2656,7 @@ if Login.AUTH:
                     CompletedBox.config(state="readonly")
                     
                     if AuthLevel(Login.AUTHLVL, 2) == False:
-                        EstCostAssemBox.config(state="normal")
-                        EstCostAssemBox.insert(0, "NO AUTH")
-                        EstCostAssemBox.config(state="readonly")
+                        pass
                     else:
                         EstCostAssemBox.config(state="normal")
                         EstCostAssemBox.insert(0, recLst[0][25])
@@ -2817,8 +2815,10 @@ if Login.AUTH:
                 frameUnit = Frame(tabNote)
                 tabNote.add(frameUnit, text="Bill of Materials")
                 frameUnit.columnconfigure(0, weight=1)
-                tabNote.select(3)
-               
+                        
+                tabObjDict = tabNote.children
+                tabNote.select(len(tabObjDict)-1)
+                   
                 style = ttk.Style()
                 style.theme_use("clam")
                 
@@ -2829,9 +2829,14 @@ if Login.AUTH:
                 
                 style.map("Treeview")
                 
+                # UnitTabTitleLabel = Label(frameUnit, 
+                #                           text=f"Bill of Material for Project {proName} {proDesc} - Machine {machName} {machDesc} - Assembly {assemType}{assemName} {assemDesc}", 
+                #                           font=("Arial", 12))
+                
                 UnitTabTitleLabel = Label(frameUnit, 
-                                          text=f"Bill of Material for Project {proName} {proDesc} - Machine {machName} {machDesc} - Assembly {assemType}{assemName} {assemDesc}", 
+                                          text=f"Bill of Material for Assembly {proName} - {machName} - {assemType}{assemName}", 
                                           font=("Arial", 12))
+                
                 UnitTabTitleLabel.grid(row=0, column=0, padx=0, pady=(10,3), ipadx=0, ipady=0, sticky=W+E) 
                 UnitTreeFrame = Frame(frameUnit)
                 UnitTreeFrame.grid(row=1, column=0, padx=10, pady=0, ipadx=10, ipady=5, sticky=W+E)
@@ -2974,6 +2979,8 @@ if Login.AUTH:
                     tabNum = tabNote.index("current")
                     if tabNum == 3:
                         closeTabUnit()
+                
+
                 
                 UnitTreeView.bind("<Button-3>", deselectUnitClick)
                 UnitTreeView.bind("<Double-Button-1>", selectUnitClick)
@@ -3610,7 +3617,7 @@ if Login.AUTH:
                         VendorBox.config(state="readonly")
                         
                         if AuthLevel(Login.AUTHLVL, 0) == False:
-                            UnitCostBox.insert(0, "NO AUTH")
+                            pass
                         else:
                             if resultSelect[0][18] == None:
                                 UnitCostBox.insert(0, "")
@@ -3618,22 +3625,7 @@ if Login.AUTH:
                                 UnitCostBox.insert(0, resultSelect[0][18])
                         
                         if AuthLevel(Login.AUTHLVL, 0) == False:
-                            UnitCostCcyLabel.config(text="SGD")
-                            
-                            CurrencyUnitBox.config(state="normal")
-                            CurrencyUnitBox.delete(0, END)
-                            CurrencyUnitBox.insert(0, "SGD")
-                            CurrencyUnitBox.config(state="readonly")
-                            
-                            ExRateBox.config(state="normal")
-                            ExRateBox.delete(0, END)
-                            ExRateBox.insert(0, 1.0)
-                            ExRateBox.config(state="readonly")
-                            
-                            TotalUnitCostBox.config(state="normal")
-                            TotalUnitCostBox.delete(0, END)
-                            TotalUnitCostBox.insert(0, "NO AUTH")
-                            TotalUnitCostBox.config(state="readonly")
+                            pass
                         else:
                             UnitCostCcyLabel.config(text=str(resultSelect[0][20]))
                             
@@ -3826,7 +3818,7 @@ if Login.AUTH:
                                                           title="Select A File",
                                                           filetypes=(("CSV Files", "*.csv"),
                                                                     ("Any Files", "*.*")))
-                
+
                     with open(f"{fileDir}", encoding = 'utf-8-sig') as f: 
                         csvFile = csv.reader(f, delimiter=",")
                         
@@ -3892,148 +3884,220 @@ if Login.AUTH:
                                              "", "", "", "", "", "",
                                              "", "", "", ""]:
                                 fullLst.append(singleLst)
+    
+                    if fileDir == "":
+                        messagebox.showwarning("Please Select a File",
+                                               "No File Selected",
+                                               parent=frameUnit)
                     
-                    calcLst = []
-                    DesQtyVal = int(desQty)
-                    OrderQtyVal = int(orderQty)
-                    
-                    def removeSymbol(cost):
-                        val = re.sub("[^0-9\.]", "", str(cost))
-                        return val
-                    
-                    def sumTotalCost(unitCst, num):
-                        if unitCst == None or unitCst == "":
-                            return 0
-                        else:
-                            val = unitCst * num
-                            return round(val, 2)
- 
-                    def totalSGDConvert(totalVal, exRate):
-                        if exRate == None or exRate == "":
-                            return 0
-                        else:
-                            totalSGDVal = float(totalVal) * float(exRate)
-                            return round(totalSGDVal, 2)
-                    
-                    for i in range(len(fullLst)):
-                        PartNum = (fullLst[i][0]).rjust(3,"0")
-                        PartDesc = fullLst[i][1]
-                        D = fullLst[i][2]
-                        CLS = fullLst[i][3]
-                        
-                        if fullLst[i][4] == "":
-                            V = 1
-                        else:
-                            V = int(fullLst[i][4])
+                    else:
+                        with open(f"{fileDir}", encoding="utf-8-sig") as f: 
+                            csvFile = csv.reader(f, delimiter=",")
                             
-                        Maker = fullLst[i][5]
-                        MakerSpec = fullLst[i][6]
+                            rawLst = []
+                            for row in csvFile:
+                                rawLst.append(row)
+                            
+                            fullLst = []
+                            for i in range(1, len(rawLst)):
+                                singleLst = ["", "", "", "", "", "", 
+                                              "", "", "", "", "", "", 
+                                              "", "", "", "", "", "",
+                                              "", "", "", ""]
+                                for j in range(len(rawLst[i])):
+                                    if rawLst[0][j] == "PART NO":
+                                        singleLst[0] = checkPartNum(rawLst[i][j])
+                                    elif rawLst[0][j] == "DESCRIPTION":
+                                        singleLst[1] = rawLst[i][j].upper()
+                                    elif rawLst[0][j] == "D":
+                                        singleLst[2] = rawLst[i][j]                    
+                                    elif rawLst[0][j] == "CLASS":
+                                        singleLst[3] = rawLst[i][j]
+                                    elif rawLst[0][j] == "V":
+                                        singleLst[4] = rawLst[i][j]
+                                    elif rawLst[0][j] == "MAKER":
+                                        singleLst[5] = rawLst[i][j]
+                                    elif rawLst[0][j] == "MAKER SPEC":
+                                        singleLst[6] = rawLst[i][j].upper()
+                                    elif rawLst[0][j] == "D. QTY":
+                                        singleLst[7] = rawLst[i][j]
+                                    elif rawLst[0][j] == "S. QTY":
+                                        singleLst[8] = rawLst[i][j]
+                                    elif rawLst[0][j] == "OH. QTY":
+                                        singleLst[9] = rawLst[i][j]
+                                    elif rawLst[0][j] == "REQ. QTY":
+                                        singleLst[10] = rawLst[i][j]
+                                    elif rawLst[0][j] == "PCH. QTY":
+                                        singleLst[11] = rawLst[i][j]
+                                    elif rawLst[0][j] == "BAL. QTY":
+                                        singleLst[12] = rawLst[i][j]
+                                    elif rawLst[0][j] == "RCV. QTY":
+                                        singleLst[13] = rawLst[i][j]
+                                    elif rawLst[0][j] == "OS. QTY":
+                                        singleLst[14] = rawLst[i][j]
+                                    elif rawLst[0][j] == "REMARK":
+                                        singleLst[15] = rawLst[i][j]
+                                    elif rawLst[0][j] == "VENDOR":
+                                        singleLst[16] = rawLst[i][j]
+                                    elif rawLst[0][j] == "UNIT COST":
+                                        singleLst[17] = rawLst[i][j]
+    
+                                    elif rawLst[0][j] == "TOTAL COST":
+                                        singleLst[18] = rawLst[i][j]
+                                    elif rawLst[0][j] == "CURRENCY":
+                                        singleLst[19] = rawLst[i][j]
+                                    elif rawLst[0][j] == "EXCHANGE RATE":
+                                        singleLst[20] = rawLst[i][j]
+                                    elif rawLst[0][j] == "TOTAL SGD":
+                                        singleLst[21] = rawLst[i][j]
+                                        
+                                if singleLst != ["", "", "", "", "", "", 
+                                                  "", "", "", "", "", "", 
+                                                  "", "", "", "", "", "",
+                                                  "", "", "", ""]:
+                                    fullLst.append(singleLst)
                         
-                        if fullLst[i][7] == "":
-                            DES = 0
-                        else:
-                            DES = int(fullLst[i][7])
-                        if fullLst[i][8] == "":
-                            SPA = 0
-                        else:
-                            SPA = int(fullLst[i][8])                            
-                        if fullLst[i][9] == "":
-                            OH = 0
-                        else:
-                            maxOH = (DES + SPA) * DesQtyVal * OrderQtyVal
-                            if int(fullLst[i][9]) > maxOH:
-                                OH = maxOH
+                        calcLst = []
+                        DesQtyVal = int(desQty)
+                        OrderQtyVal = int(orderQty)
+                        
+                        def removeSymbol(cost):
+                            val = re.sub("[^0-9\.]", "", str(cost))
+                            return val
+                        
+                        def sumTotalCost(unitCst, num):
+                            if unitCst == None or unitCst == "":
+                                return 0
                             else:
-                                OH = int(fullLst[i][9])
-                        
-                        if fullLst[i][10] == "":
-                            REQ = ((DES + SPA) * DesQtyVal * OrderQtyVal) - OH
-                        else:
-                            REQ = int(fullLst[i][10])
-                        if fullLst[i][11] == "":
-                            PCH = 0
-                        else:
-                            PCH = int(fullLst[i][11])
-                        if fullLst[i][12] == "":
-                            BAL = REQ-PCH
-                        else:
-                            BAL = int(fullLst[i][12])
-                            
-                        if fullLst[i][13] == "":
-                            RCV = 0
-                        else:
-                            RCV = int(fullLst[i][13])
-                        if fullLst[i][14] == "":
-                            OS = PCH-RCV
-                        else:
-                            OS = int(fullLst[i][14])
-                        
-                        Remark = fullLst[i][15]
-                        Vendor = fullLst[i][16]
-                        
-                        if fullLst[i][17] == "":
-                            UnitCost = None
-                        else:
-                            UnitCost = float(removeSymbol(fullLst[i][17]))
-                        
-                        if fullLst[i][18] == "":
-                            TotalUnitCost = sumTotalCost(UnitCost, REQ)
-                        else:
-                            TotalUnitCost = float(fullLst[i][18])
-                            
-                        if fullLst[i][19] == "":
-                            Currency = "SGD"
-                        else:
-                            Currency = fullLst[i][19]
-                            
-                        if fullLst[i][20] == "":
-                            if Currency == "SGD":
-                                ExRate = 1.00
-                            elif Currency in CountryRef.getCcyLst():
-                                ExRate = CountryRef.getExRate(Currency)
+                                val = unitCst * num
+                                return round(val, 2)
+     
+                        def totalSGDConvert(totalVal, exRate):
+                            if exRate == None or exRate == "":
+                                return 0
                             else:
-                                ExRate = 0.00
-                        else:
-                            ExRate = float(fullLst[i][20])
+                                totalSGDVal = float(totalVal) * float(exRate)
+                                return round(totalSGDVal, 2)
+                        
+                        for i in range(len(fullLst)):
+                            PartNum = (fullLst[i][0]).rjust(3,"0")
+                            PartDesc = fullLst[i][1]
+                            D = fullLst[i][2]
+                            CLS = fullLst[i][3]
                             
-                        if fullLst[i][21] == "":
-                            TotalSGD = totalSGDConvert(TotalUnitCost, ExRate)
-                        else:
-                            TotalSGD = fullLst[i][21]
-                        
-                        tup = (PartNum, PartDesc, D, CLS, V, Maker, MakerSpec,
-                                DES, SPA, OH, REQ, PCH, BAL, RCV, OS, Remark, Vendor,
-                                UnitCost, TotalUnitCost, Currency, ExRate, TotalSGD)
-                        
-                        calcLst.append(tup)
-
-                    sqlCommand = f""" REPLACE INTO `{assemRef}` (
-                    PartNum, Description, D, CLS, V,
-                    Maker, Spec, DES, SPA, OH, REQ,
-                    PCH, BAL, RCV, OS, Remark, Vendor, UnitCost,
-                    TotalUnitCost, Currency, ExchangeRate, TotalSGD)
-                
-                    VALUES (%s, %s, %s, %s, %s, %s, 
-                            %s, %s, %s, %s, %s, %s,
-                            %s, %s, %s, %s, %s, %s,
-                            %s, %s, %s, %s)"""
-                
-                    curLoad = connLoad.cursor()
-                    for i in range(len(calcLst)):
-                        curLoad.execute(sqlCommand, calcLst[i])
-                        connLoad.commit()
-
-                    curLoad.close()
-                    clearEntryUnit()
-                    UnitTreeView.delete(*UnitTreeView.get_children())
-                    queryTreeUnit()
+                            if fullLst[i][4] == "":
+                                V = 1
+                            else:
+                                V = int(fullLst[i][4])
+                                
+                            Maker = fullLst[i][5]
+                            MakerSpec = fullLst[i][6]
+                            
+                            if fullLst[i][7] == "":
+                                DES = 0
+                            else:
+                                DES = int(fullLst[i][7])
+                            if fullLst[i][8] == "":
+                                SPA = 0
+                            else:
+                                SPA = int(fullLst[i][8])                            
+                            if fullLst[i][9] == "":
+                                OH = 0
+                            else:
+                                maxOH = (DES + SPA) * DesQtyVal * OrderQtyVal
+                                if int(fullLst[i][9]) > maxOH:
+                                    OH = maxOH
+                                else:
+                                    OH = int(fullLst[i][9])
+                            
+                            if fullLst[i][10] == "":
+                                REQ = ((DES + SPA) * DesQtyVal * OrderQtyVal) - OH
+                            else:
+                                REQ = int(fullLst[i][10])
+                            if fullLst[i][11] == "":
+                                PCH = 0
+                            else:
+                                PCH = int(fullLst[i][11])
+                            if fullLst[i][12] == "":
+                                BAL = REQ-PCH
+                            else:
+                                BAL = int(fullLst[i][12])
+                                
+                            if fullLst[i][13] == "":
+                                RCV = 0
+                            else:
+                                RCV = int(fullLst[i][13])
+                            if fullLst[i][14] == "":
+                                OS = PCH-RCV
+                            else:
+                                OS = int(fullLst[i][14])
+                            
+                            Remark = fullLst[i][15]
+                            Vendor = fullLst[i][16]
+                            
+                            if fullLst[i][17] == "":
+                                UnitCost = None
+                            else:
+                                UnitCost = float(removeSymbol(fullLst[i][17]))
+                            
+                            if fullLst[i][18] == "":
+                                TotalUnitCost = sumTotalCost(UnitCost, REQ)
+                            else:
+                                TotalUnitCost = float(fullLst[i][18])
+                                
+                            if fullLst[i][19] == "":
+                                Currency = "SGD"
+                            else:
+                                Currency = fullLst[i][19]
+                                
+                            if fullLst[i][20] == "":
+                                if Currency == "SGD":
+                                    ExRate = 1.00
+                                elif Currency in CountryRef.getCcyLst():
+                                    ExRate = CountryRef.getExRate(Currency)
+                                else:
+                                    ExRate = 0.00
+                            else:
+                                ExRate = float(fullLst[i][20])
+                                
+                            if fullLst[i][21] == "":
+                                TotalSGD = totalSGDConvert(TotalUnitCost, ExRate)
+                            else:
+                                TotalSGD = fullLst[i][21]
+                            
+                            tup = (PartNum, PartDesc, D, CLS, V, Maker, MakerSpec,
+                                    DES, SPA, OH, REQ, PCH, BAL, RCV, OS, Remark, Vendor,
+                                    UnitCost, TotalUnitCost, Currency, ExRate, TotalSGD)
+                            
+                            calcLst.append(tup)
+    
+                        sqlCommand = f""" REPLACE INTO `{assemRef}` (
+                        PartNum, Description, D, CLS, V,
+                        Maker, Spec, DES, SPA, OH, REQ,
+                        PCH, BAL, RCV, OS, Remark, Vendor, UnitCost,
+                        TotalUnitCost, Currency, ExchangeRate, TotalSGD)
                     
-                    checkAssemTotal()
-                    checkMachTotal()
-                    checkProTotal()
+                        VALUES (%s, %s, %s, %s, %s, %s, 
+                                %s, %s, %s, %s, %s, %s,
+                                %s, %s, %s, %s, %s, %s,
+                                %s, %s, %s, %s)"""
                     
-                    messagebox.showinfo("Import Successful", 
-                                        "You Have Imported BOM", parent=frameUnit) 
+                        curLoad = connLoad.cursor()
+                        for i in range(len(calcLst)):
+                            curLoad.execute(sqlCommand, calcLst[i])
+                            connLoad.commit()
+    
+                        curLoad.close()
+                        clearEntryUnit()
+                        UnitTreeView.delete(*UnitTreeView.get_children())
+                        queryTreeUnit()
+                        
+                        checkAssemTotal()
+                        checkMachTotal()
+                        checkProTotal()
+                        
+                        messagebox.showinfo("Import Successful", 
+                                            "You Have Imported BOM", parent=frameUnit) 
                 
                 def exportCSVUnit():
                     proRef = proName
@@ -4396,17 +4460,23 @@ if Login.AUTH:
                 UnitCostCcyLabel.grid(row=1, column=11, padx=0, sticky=W)
                 
                 TotalUnitCostBox = Entry(UnitDataFrame, width=14, state="readonly")
-                TotalUnitCostCcyLabel = Label(UnitDataFrame, text="SGD").grid(row=2, column=11, padx=0, sticky=W)
+                TotalUnitCostCcyLabel = Label(UnitDataFrame, text="SGD")
+                TotalUnitCostCcyLabel.grid(row=2, column=11, padx=0, sticky=W)
                 
                 CurrencyUnitBox = ttk.Combobox(UnitDataFrame, width=10, height=5,
                                                value=CountryRef.getCcyLst(), state="readonly")
                 
-                EqualLabel = Label(UnitDataFrame, text=" = ").grid(row=3, column=10, padx=0, sticky=W)
+                EqualLabel = Label(UnitDataFrame, text=" = ")
+                EqualLabel.grid(row=3, column=10, padx=0, sticky=W)
                 ExRateBox = Entry(UnitDataFrame, width=8, state="readonly")
-                SGDLabel = Label(UnitDataFrame, text="SGD").grid(row=3, column=12, padx=0, sticky=W)
+                SGDLabel = Label(UnitDataFrame, text="SGD")
+                SGDLabel.grid(row=3, column=12, padx=0, sticky=W)
                 
                 VendorSelectionButton = Button(UnitDataFrame,text = "List", command = SelectVendor, width=3, height=1)
-                VendorSelectionButton.grid(row=0, column=11, pady=5, padx=(10,5), sticky=E)
+                if AuthLevel(Login.AUTHLVL, 0) == False:
+                    VendorSelectionButton.grid(row=0, column=13, pady=5, padx=(10,5), sticky=E)
+                else:
+                    VendorSelectionButton.grid(row=0, column=11, pady=5, padx=(10,5), sticky=E)
                 
                 VBox.config(state="normal")
                 VBox.delete(0, END)
@@ -4445,18 +4515,18 @@ if Login.AUTH:
                 CurrencyUnitBox.grid(row=3, column=9, pady=5, sticky=W)
                 ExRateBox.grid(row=3, column=11, padx=5, pady=5, sticky=W)
                 
-                # if AuthLevel(Login.AUTHLVL, 0) == False:
-                #     UnitCostLabel.grid_forget()
-                #     # TotalUnitCostLabel
-                #     # CurrencyUnitLabel
-                #     # UnitCostBox
-                #     # UnitCostCcyLabel
-                #     # TotalUnitCostBox
-                #     # TotalUnitCostCcyLabel
-                #     # CurrencyUnitBox
-                #     # EqualLabel
-                #     # ExRateBox
-                #     # SGDLabel
+                if AuthLevel(Login.AUTHLVL, 0) == False:
+                    UnitCostLabel.grid_forget()
+                    TotalUnitCostLabel.grid_forget()
+                    CurrencyUnitLabel.grid_forget()
+                    UnitCostBox.grid_forget()
+                    UnitCostCcyLabel.grid_forget()
+                    TotalUnitCostBox.grid_forget()
+                    TotalUnitCostCcyLabel.grid_forget()
+                    CurrencyUnitBox.grid_forget()
+                    EqualLabel.grid_forget()
+                    ExRateBox.grid_forget()
+                    SGDLabel.grid_forget()
                     
                     
                     
@@ -4514,6 +4584,115 @@ if Login.AUTH:
                 CurrencyUnitBox.bind("<<ComboboxSelected>>", CurrencyUnitSelect)
                 
                 
+                
+                
+                
+                PartNumBox.bind("<Return>", updateUnitReturn)
+                PartNumBox.bind("<Delete>", deleteUnitDel)
+                PartNumBox.bind("<Control-d>", setDeleteUnit)
+                PartNumBox.bind("<Escape>", closeUnitTabEsc)
+                
+                DescriptionBox.bind("<Return>", updateUnitReturn)
+                DescriptionBox.bind("<Delete>", deleteUnitDel)
+                DescriptionBox.bind("<Control-d>", setDeleteUnit)
+                DescriptionBox.bind("<Escape>", closeUnitTabEsc)
+                
+                DBox.bind("<Return>", updateUnitReturn)
+                DBox.bind("<Delete>", deleteUnitDel)
+                DBox.bind("<Control-d>", setDeleteUnit)
+                DBox.bind("<Escape>", closeUnitTabEsc)
+                
+                VBox.bind("<Return>", updateUnitReturn)
+                VBox.bind("<Delete>", deleteUnitDel)
+                VBox.bind("<Control-d>", setDeleteUnit)
+                VBox.bind("<Escape>", closeUnitTabEsc)
+                
+                MakerBox.bind("<Return>", updateUnitReturn)
+                MakerBox.bind("<Delete>", deleteUnitDel)
+                MakerBox.bind("<Control-d>", setDeleteUnit)
+                MakerBox.bind("<Escape>", closeUnitTabEsc)
+                
+                SpecBox.bind("<Return>", updateUnitReturn)
+                SpecBox.bind("<Delete>", deleteUnitDel)
+                SpecBox.bind("<Control-d>", setDeleteUnit)
+                SpecBox.bind("<Escape>", closeUnitTabEsc)
+                
+                CLSBox.bind("<Return>", updateUnitReturn)
+                CLSBox.bind("<Delete>", deleteUnitDel)
+                CLSBox.bind("<Control-d>", setDeleteUnit)
+                CLSBox.bind("<Escape>", closeUnitTabEsc)
+                
+                RemarkBox.bind("<Return>", updateUnitReturn)
+                RemarkBox.bind("<Delete>", deleteUnitDel)
+                RemarkBox.bind("<Control-d>", setDeleteUnit)
+                RemarkBox.bind("<Escape>", closeUnitTabEsc)
+                
+                DESBox.bind("<Return>", updateUnitReturn)
+                DESBox.bind("<Delete>", deleteUnitDel)
+                DESBox.bind("<Control-d>", setDeleteUnit)
+                DESBox.bind("<Escape>", closeUnitTabEsc)
+                
+                SPABox.bind("<Return>", updateUnitReturn)
+                SPABox.bind("<Delete>", deleteUnitDel)
+                SPABox.bind("<Control-d>", setDeleteUnit)
+                SPABox.bind("<Escape>", closeUnitTabEsc)
+                
+                OHBox.bind("<Return>", updateUnitReturn)
+                OHBox.bind("<Delete>", deleteUnitDel)
+                OHBox.bind("<Control-d>", setDeleteUnit)
+                OHBox.bind("<Escape>", closeUnitTabEsc)
+                
+                REQBox.bind("<Return>", updateUnitReturn)
+                REQBox.bind("<Delete>", deleteUnitDel)
+                REQBox.bind("<Control-d>", setDeleteUnit)
+                REQBox.bind("<Escape>", closeUnitTabEsc)
+                
+                PCHBox.bind("<Return>", updateUnitReturn)
+                PCHBox.bind("<Delete>", deleteUnitDel)
+                PCHBox.bind("<Control-d>", setDeleteUnit)
+                PCHBox.bind("<Escape>", closeUnitTabEsc)
+                
+                BALBox.bind("<Return>", updateUnitReturn)
+                BALBox.bind("<Delete>", deleteUnitDel)
+                BALBox.bind("<Control-d>", setDeleteUnit)
+                BALBox.bind("<Escape>", closeUnitTabEsc)
+                
+                RCVBox.bind("<Return>", updateUnitReturn)
+                RCVBox.bind("<Delete>", deleteUnitDel)
+                RCVBox.bind("<Control-d>", setDeleteUnit)
+                RCVBox.bind("<Escape>", closeUnitTabEsc)
+                
+                OSBox.bind("<Return>", updateUnitReturn)
+                OSBox.bind("<Delete>", deleteUnitDel)
+                OSBox.bind("<Control-d>", setDeleteUnit)
+                OSBox.bind("<Escape>", closeUnitTabEsc)
+                
+                VendorBox.bind("<Return>", updateUnitReturn)
+                VendorBox.bind("<Delete>", deleteUnitDel)
+                VendorBox.bind("<Control-d>", setDeleteUnit)
+                VendorBox.bind("<Escape>", closeUnitTabEsc)
+                
+                UnitCostBox.bind("<Return>", updateUnitReturn)
+                UnitCostBox.bind("<Delete>", deleteUnitDel)
+                UnitCostBox.bind("<Control-d>", setDeleteUnit)
+                UnitCostBox.bind("<Escape>", closeUnitTabEsc)
+                
+                TotalUnitCostBox.bind("<Return>", updateUnitReturn)
+                TotalUnitCostBox.bind("<Delete>", deleteUnitDel)
+                TotalUnitCostBox.bind("<Control-d>", setDeleteUnit)
+                TotalUnitCostBox.bind("<Escape>", closeUnitTabEsc)
+                
+                CurrencyUnitBox.bind("<Return>", updateUnitReturn)
+                CurrencyUnitBox.bind("<Delete>", deleteUnitDel)
+                CurrencyUnitBox.bind("<Control-d>", setDeleteUnit)
+                CurrencyUnitBox.bind("<Escape>", closeUnitTabEsc)
+                
+                ExRateBox.bind("<Return>", updateUnitReturn)
+                ExRateBox.bind("<Delete>", deleteUnitDel)
+                ExRateBox.bind("<Control-d>", setDeleteUnit)
+                ExRateBox.bind("<Escape>", closeUnitTabEsc)
+
+
     
                 queryTreeUnit()
 
@@ -4586,6 +4765,8 @@ if Login.AUTH:
             DesignQtyLabel.grid(row=1, column=9, padx=10, pady=2, sticky=E)
             CompletedLabel.grid(row=2, column=9, padx=10, pady=2, sticky=E)
             EstCostAssemLabel.grid(row=3, column=9, padx=10, pady=2, sticky=E)
+            
+
     
 
     
@@ -4653,6 +4834,8 @@ if Login.AUTH:
             DesignQtyBox.insert(0,1)
             DesignQtyBox.config(state="readonly")
             
+
+            
             
             
             TypeBox.grid(row=0, column=1, columnspan=2, padx=10, pady=2, sticky=W)
@@ -4690,6 +4873,11 @@ if Login.AUTH:
             
             EstCostAssemBox.grid(row=3, column=10, padx=10, pady=2, sticky=W)
             EstCostSGDLabel.grid(row=3, column=11, padx=0, pady=2, sticky=W)
+            
+            if AuthLevel(Login.AUTHLVL, 2) == False:
+                EstCostAssemLabel.grid_forget()
+                EstCostAssemBox.grid_forget()
+                EstCostSGDLabel.grid_forget()
             
             
     
@@ -4824,6 +5012,11 @@ if Login.AUTH:
         MachEstCostBox.grid(row=1, column=10, padx=10, pady=5, sticky=W)
         MachEstCostSGDLabel.grid(row=1, column=11, padx=(0,10), pady=5, sticky=W)
         
+        if AuthLevel(Login.AUTHLVL, 2) == False:
+            MachEstCostLabel.grid_forget()
+            MachEstCostBox.grid_forget()
+            MachEstCostSGDLabel.grid_forget()
+        
     
 
     
@@ -4950,6 +5143,12 @@ if Login.AUTH:
     ProEstCostBox.grid(row=1, column=10, padx=10, pady=5, sticky=W)
     ProSGDLabel.grid(row=1, column=11, padx=0, pady=5, sticky=W)
     
+    if AuthLevel(Login.AUTHLVL, 2) == False:
+        ProEstCostLabel.grid_forget()
+        ProEstCostBox.grid_forget()
+        ProSGDLabel.grid_forget()
+    
+    
     
     def openVendor():
         Vendor.RunVEND()
@@ -4970,7 +5169,7 @@ if Login.AUTH:
     menuBar.add_cascade(label="File", menu=fileMenu)
     fileMenu.add_command(label="Edit Employee", command=EmployeeTest.openEmployee)
     fileMenu.add_command(label="Edit Vendor", command=openVendor)
-    fileMenu.add_command(label="Edit Stock")
+    fileMenu.add_command(label="Edit Stock", command=StockTest.openStock)
     fileMenu.add_separator()
     fileMenu.add_command(label="Edit Currency Exchange Rate", command=CountryRef.openCurrency)
     fileMenu.add_separator()

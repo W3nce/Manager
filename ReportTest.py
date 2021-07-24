@@ -231,10 +231,27 @@ def openPurchase():
         else:
             deleteOrder()
 
+    def loadOrderClick(e):
+        if buttonLoadPur["state"] == "normal":
+            loadOrder()
+
+    def exitOrderEsc(e):
+        tabNum = tabNoteRep.index("current")
+        if tabNum == 0:
+            respExitRep = messagebox.askokcancel("Confirmation",
+                                                 "Exit Purchase Order Window Now?",
+                                                 parent=frameRep)
+            if respExitRep == True:
+                RepWin.destroy()
+            else:
+                pass
+
     OrderTreeView.bind("<Button-3>", deselectOrderClick)
     OrderTreeView.bind("<Double-Button-1>", selectOrderClick)
     OrderTreeView.bind("<Return>", updateOrderReturn)
     OrderTreeView.bind("<Delete>", deleteOrderDel) 
+    OrderTreeView.bind("<Button-2>", loadOrderClick)
+    OrderTreeView.bind("<Escape>", exitOrderEsc)
 
 
 
@@ -1418,7 +1435,7 @@ def openPurchase():
                         TransVal = SGDToCcy(SGDVal, TransCcyUsed)
                         
                         valSelect = (formatUnitNum(rec[0]), rec[1], rec[5], rec[6], 
-                                     rec[10], "7", rec[15], checkCostPur(rec[16]), 
+                                     rec[12], "7", rec[15], checkCostPur(rec[16]), 
                                      rec[17], SGDVal, TransVal)
                         
                         curPur.execute(selectUnitCom, valSelect)
@@ -1619,7 +1636,7 @@ def openPurchase():
                                          parent=RepWin)
                 
                 else:
-                    if PurInfo[0][8] == 1:
+                    if PurInfo[0][9] == 1:
                         respGenOrder = messagebox.askokcancel("Already Generated Before",
                                                               "Generate this order AGAIN?",
                                                               parent=RepWin)
@@ -1650,16 +1667,109 @@ def openPurchase():
             curPur.close()
             curVend.close()
             
-            # fullPartLst = []
-            # ProLst = []
+            fullPartLst = []
+            ProLst = []
+            MachAssemLst = []
+            PartLst = []
+            DescLst = []
+            QtyLst = []
             
-            # for val in purOrderUnit:
-            #     fullPartLst.append(val[1])
+            for val in purOrderUnit:
+                fullPartLst.append(val[1])
+                ProLst.append(val[1][0:6])
+                MachAssemLst.append(f"{val[1][7:9]}_{val[1][10:13]}")
+                PartLst.append(val[1][14:])
+                DescLst.append(val[2])
+                QtyLst.append(val[5])
             
+            connStock = mysql.connector.connect(host = logininfo[0],
+                                                user = logininfo[1], 
+                                                password =logininfo[2],
+                                                database= "STOCK_MASTER")
             
+            connData = mysql.connector.connect(host = logininfo[0],
+                                               user = logininfo[1], 
+                                               password =logininfo[2])
+            curData = connData.cursor()
+            for i in range(len(fullPartLst)):
+                curData.execute(f"SELECT * FROM `{ProLst[i]}`.`{MachAssemLst[i]}` WHERE PartNum = {PartLst[i]}")
+                dataFetch = curData.fetchall()
+                
+                oidVal = dataFetch[0][0]
+                BomREQ = int(dataFetch[0][11])
+                BomPCH = int(dataFetch[0][12])
+                BomBAL = int(dataFetch[0][13])
+                BomRCV = int(dataFetch[0][14])
+                                
+                PurchaseQty = int(QtyLst[i]) + BomPCH
+                BalanceQty = BomBAL - int(QtyLst[i])
+                OutstandingQty = PurchaseQty - BomRCV
+                
+                # print(f"BomPCH = {BomPCH}")
+                # print(f"BomBAL = {BomBAL}")
+                # print(f"BomRCV = {BomRCV}")
+                # print(f"PurchaseQty = {PurchaseQty}")
+                # print(f"BalanceQty = {BalanceQty}")
+                # print(f"OutstandingQty = {OutstandingQty}")
+                
+                if BalanceQty >= 0:
+                    sqlUpdateBom = f"""UPDATE `{ProLst[i]}`.`{MachAssemLst[i]}` SET
+                    PCH = %s,
+                    BAL = %s,
+                    OS = %s
 
+                    WHERE oid = %s
+                    """
 
-            
+                    PCHInput = (PurchaseQty, BalanceQty, OutstandingQty, oidVal)
+
+                    curData.execute(sqlUpdateBom, PCHInput)
+                    connData.commit()
+                
+                elif BalanceQty < 0:
+                    sqlUpdateBom = f"""UPDATE `{ProLst[i]}`.`{MachAssemLst[i]}` SET
+                    PCH = %s,
+                    BAL = %s,
+                    OS = %s
+
+                    WHERE oid = %s
+                    """
+                    
+                    PCHMaxQty = BomREQ
+                    OSMaxQty = PCHMaxQty - BomRCV
+
+                    PCHInput = (BomREQ, 0, OSMaxQty, oidVal)
+
+                    curData.execute(sqlUpdateBom, PCHInput)
+                    connData.commit()
+                    
+                    StockPartNum = fullPartLst[i]
+                    StockDesc = DescLst[i]
+                    StockQty = abs(BalanceQty)
+                    StockOrderNum = purOrderInfo[0][1]
+                    
+                    timeNow = datetime.now()
+                    formatDate = timeNow.strftime("%Y-%m-%d")
+                    
+                    createStock = f"""INSERT INTO `STOCK_LIST` (
+                    PartNum, DescStock, QtyStock, PurOrderNum, PurDate, RcvDate, Remark)
+                    
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)"""
+                    
+                    inputs = (StockPartNum, StockDesc, StockQty,
+                              StockOrderNum, formatDate, None, "")
+
+                    curStock = connStock.cursor()
+                    curStock.execute(createStock, inputs)
+                    connStock.commit()
+                    curStock.close()
+
+                else:
+                    messagebox.showerror("Error",
+                                         "Please Check Format",
+                                         parent=RepWin)
+            curData.close()
+
             def totalCostCalc(Qty, OneCost):
                 QtyNum = float(Qty) if Qty else 0
                 OneCostNum = float(OneCost) if OneCost else 0
@@ -2304,7 +2414,7 @@ def openPurchase():
         SelectTreeView.heading("Description", text="Description", anchor=CENTER)
         SelectTreeView.heading("Maker", text="Maker", anchor=CENTER)
         SelectTreeView.heading("Spec", text="Maker Specification", anchor=CENTER)
-        SelectTreeView.heading("REQ", text="REQ", anchor=CENTER)
+        SelectTreeView.heading("REQ", text="Qty.", anchor=CENTER)
         SelectTreeView.heading("Tax", text="Tax", anchor=CENTER)
         SelectTreeView.heading("Vendor", text="Vendor", anchor=CENTER)
         SelectTreeView.heading("UnitCost", text="Unit Cost", anchor=CENTER)
