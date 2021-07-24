@@ -345,17 +345,24 @@ def RunVEND():
                                                 "Create Vendor?",
                                                 parent=root)
         if respCreateVend == True:
-            curVend = connVend.cursor()    
-            curVend.execute(createCom, values)
-            connVend.commit()
-            curVend.close()
+            curVend = connVend.cursor()  
+            try:  
+                curVend.execute(createCom, values)
+                connVend.commit()
                 
-            clearEntryVend()
-            VendTreeView.delete(*VendTreeView.get_children())
-            queryTreeVend()
+                curVend.close()  
+                clearEntryVend()
+                VendTreeView.delete(*VendTreeView.get_children())
+                queryTreeVend()
+                
+                messagebox.showinfo("Create Successful", 
+                                    f"You Have Added Vendor {venVal}", parent=root) 
+            except Error as e:
+                messagebox.showinfo("Create Vendor", 
+                                f"SQL Error while creating vendor,\n {e}", parent=root)
+                curVend.close() 
+             
             
-            messagebox.showinfo("Create Successful", 
-                                f"You Have Added Vendor {venVal}", parent=root) 
     
     def deleteVend():
         selected = VendTreeView.selection()[0]
@@ -522,7 +529,7 @@ def RunVEND():
                                                         ("Any Files", "*.*")),parent = root)
         fullLst = []
         try:
-            with open(f"{fileDir}") as f: 
+            with open(f"{fileDir}",encoding = 'utf-8-sig') as f: 
                 csvFile = csv.reader(f, delimiter=",")
                 
                 rawLst = []
@@ -681,7 +688,7 @@ def RunVEND():
     VendComCityLabel = Label(VendDataFrame, text="City", font=("Arial", 8))
     VendPostalCodeLabel = Label(VendDataFrame, text="Postal Code", font=("Arial", 8))
     VendAddALabel = Label(VendDataFrame, text="Blk. & St.", font=("Arial", 8))
-    VendAddBLabel = Label(VendDataFrame, text="Unit & Building", font=("Arial", 8))
+    VendAddBLabel = Label(VendDataFrame, text="Unit", font=("Arial", 8))
     VendMainPOCLabel = Label(VendDataFrame, text="Main POC", font=("Arial", 8))
     VendMainPOCNumLabel = Label(VendDataFrame, text="Main POC No.", font=("Arial", 8))
     VendMainPOCEmailLabel = Label(VendDataFrame, text="Main POC Email", font=("Arial", 8))
