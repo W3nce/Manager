@@ -5114,6 +5114,7 @@ if Login.AUTH:
     ProcurementMenu = Menu(menuBar, tearoff=0)
     menuBar.add_cascade(label="Procurement", menu=ProcurementMenu)
     ProcurementMenu.add_command(label="Generate RFQ", command=openRFQ)
+    ProcurementMenu.add_command(label="Review RFQ", command=reviewRFQ)
     ProcurementMenu.add_separator()
     ProcurementMenu.add_command(label="Generate Purchase Order", command=ReportTest.openPurchase)
     
