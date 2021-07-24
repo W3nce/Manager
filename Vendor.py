@@ -688,7 +688,7 @@ def RunVEND():
     VendComCityLabel = Label(VendDataFrame, text="City", font=("Arial", 8))
     VendPostalCodeLabel = Label(VendDataFrame, text="Postal Code", font=("Arial", 8))
     VendAddALabel = Label(VendDataFrame, text="Blk. & St.", font=("Arial", 8))
-    VendAddBLabel = Label(VendDataFrame, text="Unit", font=("Arial", 8))
+    VendAddBLabel = Label(VendDataFrame, text="Unit & Building", font=("Arial", 8))
     VendMainPOCLabel = Label(VendDataFrame, text="Main POC", font=("Arial", 8))
     VendMainPOCNumLabel = Label(VendDataFrame, text="Main POC No.", font=("Arial", 8))
     VendMainPOCEmailLabel = Label(VendDataFrame, text="Main POC Email", font=("Arial", 8))
