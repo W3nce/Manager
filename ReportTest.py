@@ -28,7 +28,7 @@ import os
 # Login.AUTHLVL
 
 logininfo = (ConnConfig.host,ConnConfig.username,ConnConfig.password)
-#RetrieveToken()
+RetrieveToken()
 
 def openPurchase():
     RepWin = Toplevel()

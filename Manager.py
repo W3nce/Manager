@@ -3818,7 +3818,73 @@ if Login.AUTH:
                                                           title="Select A File",
                                                           filetypes=(("CSV Files", "*.csv"),
                                                                     ("Any Files", "*.*")))
-                    
+
+                    with open(f"{fileDir}", encoding = 'utf-8-sig') as f: 
+                        csvFile = csv.reader(f, delimiter=",")
+                        
+                        rawLst = []
+                        for row in csvFile:
+                            rawLst.append(row)
+                        
+                        fullLst = []
+                        for i in range(1, len(rawLst)):
+                            singleLst = ["", "", "", "", "", "", 
+                                         "", "", "", "", "", "", 
+                                         "", "", "", "", "", "",
+                                         "", "", "", ""]
+                            for j in range(len(rawLst[i])):
+                                if rawLst[0][j] == "PART NO":
+                                    singleLst[0] = checkPartNum(rawLst[i][j])
+                                elif rawLst[0][j] == "DESCRIPTION":
+                                    singleLst[1] = rawLst[i][j].upper()
+                                elif rawLst[0][j] == "D":
+                                    singleLst[2] = rawLst[i][j]                    
+                                elif rawLst[0][j] == "CLASS":
+                                    singleLst[3] = rawLst[i][j]
+                                elif rawLst[0][j] == "V":
+                                    singleLst[4] = rawLst[i][j]
+                                elif rawLst[0][j] == "MAKER":
+                                    singleLst[5] = rawLst[i][j]
+                                elif rawLst[0][j] == "MAKER SPEC":
+                                    singleLst[6] = rawLst[i][j].upper()
+                                elif rawLst[0][j] == "D. QTY":
+                                    singleLst[7] = rawLst[i][j]
+                                elif rawLst[0][j] == "S. QTY":
+                                    singleLst[8] = rawLst[i][j]
+                                elif rawLst[0][j] == "OH. QTY":
+                                    singleLst[9] = rawLst[i][j]
+                                elif rawLst[0][j] == "REQ. QTY":
+                                    singleLst[10] = rawLst[i][j]
+                                elif rawLst[0][j] == "PCH. QTY":
+                                    singleLst[11] = rawLst[i][j]
+                                elif rawLst[0][j] == "BAL. QTY":
+                                    singleLst[12] = rawLst[i][j]
+                                elif rawLst[0][j] == "RCV. QTY":
+                                    singleLst[13] = rawLst[i][j]
+                                elif rawLst[0][j] == "OS. QTY":
+                                    singleLst[14] = rawLst[i][j]
+                                elif rawLst[0][j] == "REMARK":
+                                    singleLst[15] = rawLst[i][j]
+                                elif rawLst[0][j] == "VENDOR":
+                                    singleLst[16] = rawLst[i][j]
+                                elif rawLst[0][j] == "UNIT COST":
+                                    singleLst[17] = rawLst[i][j]
+
+                                elif rawLst[0][j] == "TOTAL COST":
+                                    singleLst[18] = rawLst[i][j]
+                                elif rawLst[0][j] == "CURRENCY":
+                                    singleLst[19] = rawLst[i][j]
+                                elif rawLst[0][j] == "EXCHANGE RATE":
+                                    singleLst[20] = rawLst[i][j]
+                                elif rawLst[0][j] == "TOTAL SGD":
+                                    singleLst[21] = rawLst[i][j]
+                                    
+                            if singleLst != ["", "", "", "", "", "", 
+                                             "", "", "", "", "", "", 
+                                             "", "", "", "", "", "",
+                                             "", "", "", ""]:
+                                fullLst.append(singleLst)
+    
                     if fileDir == "":
                         messagebox.showwarning("Please Select a File",
                                                "No File Selected",
