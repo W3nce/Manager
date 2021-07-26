@@ -900,7 +900,7 @@ def openRFQ(tabNote,RFQ = None):
     UnitTreeView.heading("REQ", text="REQ", anchor=E)
     UnitTreeView.heading("PCH", text="PCH", anchor=E)
     UnitTreeView.heading("UnitCost", text="Unit Cost", anchor=E)
-    UnitTreeView.heading("Curr", text="Curr", anchor=W)
+    UnitTreeView.heading("Curr", text="Ccy", anchor=W)
     UnitTreeView.heading("Total", text="Total Cost", anchor=E)
     UnitTreeView.heading("PO", text="PO", anchor=CENTER)
     

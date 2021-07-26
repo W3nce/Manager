@@ -29,10 +29,10 @@ import os
 
 logininfo = (ConnConfig.host,ConnConfig.username,ConnConfig.password)
 
-if Login.AUTHLVL == 0:
-    pass
-else:
-    RetrieveToken()
+# if Login.AUTHLVL == 0:
+#     pass
+# else:
+#     RetrieveToken()
 
 def openPurchase():
     RepWin = Toplevel()
