@@ -28,7 +28,11 @@ import os
 # Login.AUTHLVL
 
 logininfo = (ConnConfig.host,ConnConfig.username,ConnConfig.password)
-RetrieveToken()
+
+if Login.AUTHLVL == 0:
+    pass
+else:
+    RetrieveToken()
 
 def openPurchase():
     RepWin = Toplevel()
@@ -1648,6 +1652,7 @@ def openPurchase():
                         genPurOrderCom()
 
         def genPurOrderCom():
+            # try:
             curCom = connCom.cursor()
             curCom.execute("SELECT * FROM COMPANY_MWA")
             companyInfo = curCom.fetchall()
@@ -1768,6 +1773,22 @@ def openPurchase():
                     messagebox.showerror("Error",
                                          "Please Check Format",
                                          parent=RepWin)
+            
+            sqlUpdateStat = f"""UPDATE `PUR_ORDER_MASTER`.`PUR_ORDER_LIST` SET
+            IssueStat = %s,
+            OrderStat = %s
+
+            WHERE oid = %s
+            """
+
+            StatInput = (1, 3, loadOrderSelect)
+
+            curData.execute(sqlUpdateStat, StatInput)
+            connData.commit()
+            
+            OrderTreeView.delete(*OrderTreeView.get_children())
+            queryTreeOrder()
+            
             curData.close()
 
             def totalCostCalc(Qty, OneCost):
@@ -1967,6 +1988,11 @@ def openPurchase():
             
             messagebox.showinfo("Create Successful", 
                                 f"You Have Generated PO {PurOrderNumRef}", parent=framePur) 
+            
+            # except:
+            #     messagebox.showerror("Error",
+            #                          "Please Check Format",
+            #                          parent=framePur)
         
 
         
