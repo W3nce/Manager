@@ -28,11 +28,7 @@ import os
 # Login.AUTHLVL
 
 logininfo = (ConnConfig.host,ConnConfig.username,ConnConfig.password)
-
-if Login.AUTHLVL == 0:
-    pass
-else:
-    RetrieveToken()
+#RetrieveToken()
 
 def openPurchase():
     RepWin = Toplevel()
@@ -134,11 +130,11 @@ def openPurchase():
     #2 Total Cost
     #3 Delete Project
     #4 Edit Employee
-    #5 Approve PurOrder # USED TO UNLOCK COMPLETED ORDER
+    #5 Approve PurOrder # USED TO UNLOCK COMPLETED ORDER (BOTH <500 and >500)
     #6 Generate PurOrder
     
     def AuthLevel(Auth, index):
-        AuthDic = {0:[0,0,0,0,0,0,0], 1:[1,1,0,0,0,0,1],
+        AuthDic = {0:[0,0,0,0,0,0,0], 1:[1,1,0,0,0,1,1],
                    2:[1,1,1,1,0,0,0], 3:[1,1,1,1,1,1,1]}
         AuthBool = AuthDic.get(Auth)[index]
         return AuthBool
@@ -275,9 +271,9 @@ def openPurchase():
             
             currentNum = result[0][1]
             
-            latestYear = result[0][5].year
-            latestMonth = result[0][5].month
-            latestDay = result[0][5].day
+            latestYear = result[0][3].year
+            latestMonth = result[0][3].month
+            latestDay = result[0][3].day
             
             currentYear = datetime.now().year
             currentMonth = datetime.now().month
@@ -553,7 +549,7 @@ def openPurchase():
             OrderTreeView.insert(parent=f"M{rec[1][5:9]}", index=END, iid=rec[0], text="", 
                                   values=(rec[1], rec[2], rec[3], addressFull, rec[5],
                                           boolLst[rec[10]], 
-                                          f"{rec[11]} SGD"))            
+                                          f"{rec[11]} SGD"))
         curVend.close()
         
     def updateOrderCcy():
@@ -647,6 +643,11 @@ def openPurchase():
             curPur.close()
             
             updateOrderCcy()
+            
+            tabLstOrder = tabNoteRep.winfo_children()
+            for i in range(1, len(tabLstOrder)):
+                tabLstOrder[i].destroy()
+            buttonLoadPur.config(state=NORMAL)
             
             clearEntryOrder()
             OrderTreeView.delete(*OrderTreeView.get_children())
@@ -1086,6 +1087,8 @@ def openPurchase():
         TransCcyUsed = purSelect[0][5]
         loadOrderSelect = OrderTreeView.selection()[0]
         
+        ProgressStatRef = purSelect[0][7]
+        
         framePur = Frame(tabNoteRep)
         tabNoteRep.add(framePur, text="Select Unit for Purchase Order")
         framePur.columnconfigure(0, weight=1)
@@ -1414,6 +1417,14 @@ def openPurchase():
 
         
         def selectUnitPur():
+            if ProgressStatRef == 1:
+                messagebox.showerror("Error",
+                                     "You are NOT authorized to change a Completed Order",
+                                     parent=RepWin)
+            else:
+                selectUnitPurCom()
+            
+        def selectUnitPurCom():
             selIndex = ValTreeView.selection()
             if selIndex == ():
                 messagebox.showerror("Unable to Select",
@@ -1451,8 +1462,16 @@ def openPurchase():
                     queryTreeSelect()
                 else:
                     pass
-    
+        
         def deleteUnitPur():
+            if ProgressStatRef == 1:
+                messagebox.showerror("Error",
+                                     "You are NOT authorized to change a Completed Order",
+                                     parent=RepWin)
+            else:
+                deleteUnitPurCom()
+        
+        def deleteUnitPurCom():
             selDelete = SelectTreeView.selection()
             if selDelete == ():
                 messagebox.showerror("Unable to Delete",
@@ -1499,45 +1518,50 @@ def openPurchase():
             SelectTreeView.config(selectmode="extended")
             
         def selectUnitData(e):
-            selVal = SelectTreeView.selection()
-            if selVal == ():
+            if ProgressStatRef == 1:
                 messagebox.showerror("Error",
-                                     "Please Select a Part",
-                                     parent=framePur)
-            elif len(selVal) > 1:
-                messagebox.showerror("Error",
-                                     "Please Select ONLY ONE Part",
-                                     parent=framePur)
+                                      "You are NOT authorized to change a Completed Order",
+                                      parent=RepWin)
             else:
-                selected = selVal[0]
-                curPur = connPur.cursor()
-                curPur.execute(f"SELECT * from `{PurOrderNumRef}` WHERE oid={selected}")
-                
-                unitVal = curPur.fetchall()
-                clearUnitData()
-                
-                TaxBox.delete(0, END)
-                CurrencyBox.config(state="normal")
-                CurrencyBox.delete(0, END)
-                CurrencyBox.config(state="readonly")
-                
-                ReqQtyBox.insert(0, unitVal[0][5])
-                
-                if unitVal[0][8] == None or unitVal[0][8] == "None":
-                    UnitCostSelectBox.insert(0, "")
+                selVal = SelectTreeView.selection()
+                if selVal == ():
+                    messagebox.showerror("Error",
+                                         "Please Select a Part",
+                                         parent=framePur)
+                elif len(selVal) > 1:
+                    messagebox.showerror("Error",
+                                         "Please Select ONLY ONE Part",
+                                         parent=framePur)
                 else:
-                    UnitCostSelectBox.insert(0, unitVal[0][8])
-                
-                TaxBox.config(state="normal")
-                TaxBox.delete(0, END)
-                TaxBox.insert(0, unitVal[0][6])
-                TaxBox.config(state="readonly")
-                
-                CurrencyBox.config(state="normal")
-                CurrencyBox.insert(0, unitVal[0][9])
-                CurrencyBox.config(state="readonly")
-                
-                SelectTreeView.config(selectmode="none")
+                    selected = selVal[0]
+                    curPur = connPur.cursor()
+                    curPur.execute(f"SELECT * from `{PurOrderNumRef}` WHERE oid={selected}")
+                    
+                    unitVal = curPur.fetchall()
+                    clearUnitData()
+                    
+                    TaxBox.delete(0, END)
+                    CurrencyBox.config(state="normal")
+                    CurrencyBox.delete(0, END)
+                    CurrencyBox.config(state="readonly")
+                    
+                    ReqQtyBox.insert(0, unitVal[0][5])
+                    
+                    if unitVal[0][8] == None or unitVal[0][8] == "None":
+                        UnitCostSelectBox.insert(0, "")
+                    else:
+                        UnitCostSelectBox.insert(0, unitVal[0][8])
+                    
+                    TaxBox.config(state="normal")
+                    TaxBox.delete(0, END)
+                    TaxBox.insert(0, unitVal[0][6])
+                    TaxBox.config(state="readonly")
+                    
+                    CurrencyBox.config(state="normal")
+                    CurrencyBox.insert(0, unitVal[0][9])
+                    CurrencyBox.config(state="readonly")
+                    
+                    SelectTreeView.config(selectmode="none")
             
         def deselectUnitData(e):
             selected = SelectTreeView.selection()
@@ -1562,49 +1586,54 @@ def openPurchase():
             queryTreeSelect()
         
         def updateUnitData():
-            sqlCommand = f"""UPDATE `{PurOrderNumRef}` SET
-            REQ = %s,
-            UnitCost = %s,
-            Tax = %s,
-            Currency = %s,
-            CostSGD = %s,
-            CostTrans = %s
-            
-            WHERE oid = %s
-            """
-            
-            selVal = SelectTreeView.selection()
-            if len(selVal) != 1:
+            if ProgressStatRef == 1:
                 messagebox.showerror("Error",
-                                     "Please Select One Part ONLY",
-                                     parent=framePur)
+                                      "You are NOT authorized to change a Completed Order",
+                                      parent=RepWin)
             else:
-                selected = selVal[0]
+                sqlCommand = f"""UPDATE `{PurOrderNumRef}` SET
+                REQ = %s,
+                UnitCost = %s,
+                Tax = %s,
+                Currency = %s,
+                CostSGD = %s,
+                CostTrans = %s
                 
-                newTotalSGD = CcyToSGD(UnitCostSelectBox.get(), CurrencyBox.get())
-                newTotalCcy = SGDToCcy(newTotalSGD, TransCcyUsed)
+                WHERE oid = %s
+                """
                 
-                inputs = (ReqQtyBox.get(), checkCostPur(UnitCostSelectBox.get()), 
-                          TaxBox.get(), CurrencyBox.get(), 
-                          newTotalSGD, newTotalCcy, selected)
-                
-                response = messagebox.askokcancel("Confirmation", "Confirm Update", parent=RepWin)
-                if response == True:
-                    curPur = connPur.cursor()
-                    curPur.execute(sqlCommand, inputs)
-                    connPur.commit()
-                    curPur.close()
-    
-                    clearUnitData()
-                    
-                    checkOrderTotal()
-                    SelectTreeView.delete(*SelectTreeView.get_children())
-                    queryTreeSelect()
-                    
-                    messagebox.showinfo("Update Successful", 
-                                        f"You Have Updated This Part", parent=RepWin) 
+                selVal = SelectTreeView.selection()
+                if len(selVal) != 1:
+                    messagebox.showerror("Error",
+                                         "Please Select One Part ONLY",
+                                         parent=framePur)
                 else:
-                    pass
+                    selected = selVal[0]
+                    
+                    newTotalSGD = CcyToSGD(UnitCostSelectBox.get(), CurrencyBox.get())
+                    newTotalCcy = SGDToCcy(newTotalSGD, TransCcyUsed)
+                    
+                    inputs = (ReqQtyBox.get(), checkCostPur(UnitCostSelectBox.get()), 
+                              TaxBox.get(), CurrencyBox.get(), 
+                              newTotalSGD, newTotalCcy, selected)
+                    
+                    response = messagebox.askokcancel("Confirmation", "Confirm Update", parent=RepWin)
+                    if response == True:
+                        curPur = connPur.cursor()
+                        curPur.execute(sqlCommand, inputs)
+                        connPur.commit()
+                        curPur.close()
+        
+                        clearUnitData()
+                        
+                        checkOrderTotal()
+                        SelectTreeView.delete(*SelectTreeView.get_children())
+                        queryTreeSelect()
+                        
+                        messagebox.showinfo("Update Successful", 
+                                            f"You Have Updated This Part", parent=RepWin) 
+                    else:
+                        pass
 
         def updateUnitDataClick(e):
             updateUnitData()
@@ -1619,25 +1648,6 @@ def openPurchase():
 
 
 
-        def checkIssueStat():
-            curPur = connPur.cursor()
-
-            sqlOrderStat = f"""UPDATE PUR_ORDER_LIST SET
-            `IssueStat` = %s,
-            `OrderStat` = %s
-
-            WHERE `oid` = %s"""
-            
-            StatInput = (1, 3, loadOrderSelect)
-            
-            curPur.execute(sqlOrderStat, StatInput)
-            connPur.commit()
-            curPur.close()
-            
-            clearEntryOrder()
-            OrderTreeView.delete(*OrderTreeView.get_children())
-            queryTreeOrder()
-            
         def genPurOrder():
             if AuthLevel(Login.AUTHLVL, 6) == False:
                 messagebox.showerror("Insufficient Clearance",
@@ -1728,13 +1738,6 @@ def openPurchase():
                 BalanceQty = BomBAL - int(QtyLst[i])
                 OutstandingQty = PurchaseQty - BomRCV
                 
-                # print(f"BomPCH = {BomPCH}")
-                # print(f"BomBAL = {BomBAL}")
-                # print(f"BomRCV = {BomRCV}")
-                # print(f"PurchaseQty = {PurchaseQty}")
-                # print(f"BalanceQty = {BalanceQty}")
-                # print(f"OutstandingQty = {OutstandingQty}")
-                
                 if BalanceQty >= 0:
                     sqlUpdateBom = f"""UPDATE `{ProLst[i]}`.`{MachAssemLst[i]}` SET
                     PCH = %s,
@@ -1792,7 +1795,6 @@ def openPurchase():
                                          "Please Check Format",
                                          parent=RepWin)
             curData.close()
-            checkIssueStat()
 
             def totalCostCalc(Qty, OneCost):
                 QtyNum = float(Qty) if Qty else 0
@@ -1988,10 +1990,9 @@ def openPurchase():
             PurOrderGen.printNotes()
             
             PurOrderGen.output(f"{PurOrderNumRef}.pdf")
-
+            
             messagebox.showinfo("Create Successful", 
                                 f"You Have Generated PO {PurOrderNumRef}", parent=framePur) 
-
         
 
         
@@ -2039,9 +2040,31 @@ def openPurchase():
             Fetch.commit()
             FetchCursor.close()
             
-            
+        
         def ExportToXero():
-            
+            if AuthLevel(Login.AUTHLVL, 6) == False:
+                messagebox.showerror("Insufficient Clearance",
+                                     "You are NOT authorized to access XERO",
+                                     parent=RepWin)
+            else:
+                curPur = connPur.cursor() 
+                curPur.execute(f"SELECT * FROM PUR_ORDER_LIST WHERE PurOrderNum = '{PurOrderNumRef}'")
+                PurInfo = curPur.fetchall()
+                curPur.close()
+                
+                if PurInfo[0][8] == 0:
+                    messagebox.showerror("Unable to Export",
+                                         "This order has YET to be Approved",
+                                         parent=RepWin)
+                elif PurInfo[0][8] == 2:
+                    messagebox.showerror("Unable to Export",
+                                         "This order has been REJECTED",
+                                         parent=RepWin)
+                
+                else:
+                    ExportToXeroCom()
+        
+        def ExportToXeroCom():
             tkn = RetrieveToken()
             
             ContactDict = XeroSuppliersGetAll()
@@ -2390,6 +2413,17 @@ def openPurchase():
         # buttonUpdateCommon.grid(row=1, column=5, padx=(5,10), pady=5, sticky=W)
 
         # CurrencyBox.bind("<<ComboboxSelected>>", CurrencySelect)
+        
+        if ProgressStatRef == 1:
+            buttonSelectThis.config(state="disabled")
+            buttonDeleteThis.config(state="disabled")
+            ReqQtyBox.config(state="disabled")
+            UnitCostSelectBox.config(state="disabled")
+            TaxBox.config(state="disabled")
+            CurrencyBox.config(state="disabled")
+            buttonClearData.config(state="disabled")
+            buttonUpdateData.config(state="disabled")
+            buttonRefreshData.config(state="disabled")
 
 
 
@@ -2601,7 +2635,16 @@ def openPurchase():
     ApproveStatBox.current(0)
     IssueStatBox.current(0)
     
-    
+    # if AuthLevel(Login.AUTHLVL, 5) == False:
+    #     ApproveStatBox.config(state="disabled")
+        
+    #     def ApproveClearance(e):
+    #         messagebox.showerror("Error",
+    #                              "You are NOT authorized to change approve status",
+    #                              parent=RepWin)
+    #     ApproveStatBox.bind("<Double-Button-1>", ApproveClearance)
+        
+
     
     def ProgressStatSelect(e):
         ProgressVal = ProgressStatBox.current()
@@ -2620,15 +2663,78 @@ def openPurchase():
                 messagebox.showerror("Error",
                                      "You are NOT ALLOWED to change Approval Status when incomplete",
                                      parent=RepWin)
-            
             else:
                 if ApproveVal == 0:
                     IssueStatBox.current(0)
                 else:
                     pass
+        else:
+            if Login.AUTHLVL == 1:
+                if buttonCreatePur["state"] == "disabled":
+                    index = OrderTreeView.selection()[0]
+                    rec = OrderTreeView.item(index, "values")
+                    costVal = float(re.sub("[^0-9\.]", "", str(rec[6])))
+                    
+                    if costVal > 500:
+                        if ApproveVal == 1 or ApproveVal == 2:
+                            ApproveStatBox.current(0)
+                            messagebox.showerror("Error",
+                                                 "You are NOT ALLOWED to change Approval Status due to Cost",
+                                                 parent=RepWin)
+            
+            elif Login.AUTHLVL == 3:
+                pass
+            
+            else:
+                messagebox.showerror("Error",
+                                     "You are NOT ALLOWED to change Approval Status",
+                                     parent=RepWin)
+                
+            
+                
+    def IssueStatSelect(e):
+        ProgressVal = ProgressStatBox.current()
+        ApproveVal = ApproveStatBox.current()
+        IssueVal = IssueStatBox.current()
+        if ProgressVal == 0:
+            if IssueVal == 1:
+                IssueStatBox.current(0)
+                messagebox.showerror("Error",
+                                     "You are NOT ALLOWED to change Issue Status when incomplete",
+                                     parent=RepWin)
+            else:
+                pass
+        elif ApproveVal == 0:
+            if IssueVal == 1:
+                IssueStatBox.current(0)
+                messagebox.showerror("Error",
+                                     "You are NOT ALLOWED to change Issue Status when Not Approved",
+                                     parent=RepWin)
+            else:
+                pass
+            
+        elif ApproveVal == 2:
+            if IssueVal == 1:
+                IssueStatBox.current(0)
+                messagebox.showerror("Error",
+                                     "You are NOT ALLOWED to change Issue Status when Rejected",
+                                     parent=RepWin)
+            else:
+                pass
+            
+        else:
+            pass
+    
+    def ApproveStatClick(e):
+        if AuthLevel(Login.AUTHLVL, 5) == False:
+            messagebox.showerror("Error",
+                                 "You are NOT authorized to change Approval Status",
+                                 parent=RepWin)
     
     ProgressStatBox.bind("<<ComboboxSelected>>", ProgressStatSelect)
     ApproveStatBox.bind("<<ComboboxSelected>>", ApproveStatSelect)
+    ApproveStatBox.bind("<Button-1>", ApproveStatClick)
+    IssueStatBox.bind("<<ComboboxSelected>>", IssueStatSelect)
 
     
 
