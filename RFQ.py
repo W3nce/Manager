@@ -13,19 +13,12 @@ import re
 from fpdf import FPDF
 import ConnConfig,CountryRef
 from CBTreeView import CbTreeview
-import CBTreeView
+from RFQemail import EmailRFQWindow as IssueEmail
 
-
-
-
-#from CheckBoxTreeView import CheckboxTreeview
-
-
+from AutoCombo import AutocompleteCombobox,AutocompleteEntry 
 import os
-import pathlib
-import win32com.client as client
-from AutoCombo import AutocompleteCombobox 
 
+import pprint as pp
 logininfo = (ConnConfig.host,ConnConfig.username,ConnConfig.password)
 
 connRFQ = mysql.connector.connect(host = logininfo[0],
@@ -46,7 +39,31 @@ StatusList = list(StatusDict)
 
 
 def openRFQ(tabNote,RFQ = None):
-    global ProjList,MachineList,MakerList,img,EmployeeDict,CurrentRFQ,StatusDict
+    global ProjList,MachineList,MakerList,img,EmployeeDict,CurrentRFQ,StatusDict,photo
+        
+    if CurrentRFQ and RFQ != CurrentRFQ:
+        messagebox.showwarning("Open RFQ Error", "Please close current RFQ")
+                
+        tabObjDict = tabNote.children.copy()
+        tab_names = ["Request for Quotation"]
+        
+        for Tab in tabObjDict:
+            
+            if tabNote.tab('.!notebook.' + Tab, "text") in tab_names:
+                tabNote.select(tabObjDict[Tab])
+        return
+    else:
+        tabObjDict = tabNote.children.copy()
+        tab_names = ["Request for Quotation"]
+        
+        for Tab in tabObjDict:
+            
+            if tabNote.tab('.!notebook.' + Tab, "text") in tab_names:
+                
+                tabObjDict[Tab].destroy()
+            
+        pass
+        
     CurrentRFQ = RFQ
     
     #photo = Image.open('mag3.png')
@@ -91,11 +108,15 @@ def openRFQ(tabNote,RFQ = None):
     
     def Refresh(): 
         global CurrentRFQ
-        
+        RFQNo = CurrentRFQ
         if CurrentRFQ:
-            if messagebox.askyesno('Refresh RFQ Entry','Are you sure to refresh this RFQ?\nAny unsaved changes will be lost',parent = RFQFrame):
-                print('Current:' + CurrentRFQ)
-                RFQNo = CurrentRFQ
+            if not UnitTreeView.TreeViewSAVED :
+                if messagebox.askyesno('Refresh RFQ Entry','Are you sure to refresh this RFQ?\nAny unsaved changes will be lost',parent = RFQFrame):
+                    
+                    OpenCurrent(RFQNo)
+                else: 
+                    OpenCurrent(RFQNo)
+            else:
                 OpenCurrent(RFQNo)
         else:
             curRFQ = connRFQ.cursor()
@@ -114,92 +135,94 @@ def openRFQ(tabNote,RFQ = None):
             EmployeeDict = {Employee [0]: Employee[1] for Employee in curRFQ.fetchall()}
             
             curRFQ.close()
-            print('New')
             NewRFQ()
 
     
     def NewRFQ():   
         global ProjList,MachineList,MakerList
-        if ProjectCombo.get() in ProjList:
-            _QueryMachNo()
-        if MachineCombo.get() in MachineList:
-            _QueryMaker()
-        if MakerList:
-            SelectMakerPartsButton.configure(state = 'active')
-            CreateRFQButton.configure(state = 'active')
-            IssueRFQButton.configure(state = 'active')
-        else:
-            SelectMakerPartsButton.configure(state = 'disabled')   
-            CreateRFQButton.configure(state = 'disabled') 
-            IssueRFQButton.configure(state = 'disabled') 
+        _QueryMachNo()
+        _QueryMaker()
+        
+        ProjectCombo.configure(state='active')
+        MachineCombo.configure(state='active')
+        CompletedCheckbutton.configure(state='disabled')
+# =============================================================================
+#         
+#         if MakerList:
+#             SelectMakerPartsButton.configure(state = 'active')
+#             CreateRFQButton.configure(state = 'active')
+#             IssueRFQButton.configure(state = 'active')
+#         else:
+#             SelectMakerPartsButton.configure(state = 'disabled')   
+#             CreateRFQButton.configure(state = 'disabled') 
+#             IssueRFQButton.configure(state = 'disabled') 
+# =============================================================================
             
         _ShowPurchaserName()
     
     def _QueryMachNo():
-        global MachineList,MachineDict
+        global ProjList,MachineList,MachineDict,MakerList
+        MachineList = []
+        MachineDict = {}
+        
         curRFQ = connRFQ.cursor()
+        if ProjList:
+            
+            curRFQ.execute(f"""
+                           SELECT MACH_ID,MACH_NAME,ORDER_QTY FROM {ProjectCombo.get()}.mach_index
+                           """)
+                           
+            MachineDict = {Machid[0]:(Machid[1],Machid[2]) for Machid in curRFQ.fetchall()}
+            MachineList = list(MachineDict)
+            
+            
+            MachineCombo['value'] = MachineList 
         
-        curRFQ.execute(f"""
-                       SELECT MACH_ID,MACH_NAME,ORDER_QTY FROM {ProjectCombo.get()}.mach_index
-                       """)
-                       
-        MachineDict = {Machid[0]:(Machid[1],Machid[2]) for Machid in curRFQ.fetchall()}
-        MachineList = list(MachineDict)
-        
-        
-        MachineCombo['value'] = MachineList 
         if MachineList :
             MachineCombo.current(0)
             
         else:
             MachineCombo.set('Please create a Machine')
+            MakerList = []
             
         curRFQ.close()
         
         ProjectNameLabel['text'] = ProjNameDict[ProjectCombo.get()]
-        
-        if MachineList:
-            SelectMakerPartsButton.configure(state = 'active')
-            CreateRFQButton.configure(state = 'active')
-            IssueRFQButton.configure(state = 'active')
-        
 
     
     def _QueryMaker():
         global MakerList,MachineDict,AsmDict
+        AsmDict = {}
         curRFQ = connRFQ.cursor()
-        curRFQ.execute(f"""
-                       SELECT `ASSEM_FULL`,`DES_QTY` FROM `{ProjectCombo.get()}`.`{MachineCombo.get()}`
-                       """)
-                       
-        AsmDict = {Asm[0]:Asm[1] for Asm in curRFQ.fetchall()}
-        AsmList = list(AsmDict)
-
-        if AsmList:
-            pass
-        else:
-            MakerCombo.set('No Assembly for this Machine')
-            return
-
-        
-        MakerList = []
-        for Asm in AsmList:
-            try: 
-                MakerList.remove('No Maker for Selected Parts')
-            except ValueError:
-                pass
+        if MachineDict: 
+            
             curRFQ.execute(f"""
-                           SELECT `Maker` FROM `{ProjectCombo.get()}`.`{MachineCombo.get()}_{Asm}`
+                           SELECT `ASSEM_FULL`,`DES_QTY` FROM `{ProjectCombo.get()}`.`{MachineCombo.get()}`
                            """)
-            for Maker in curRFQ.fetchall():
-                if Maker[0]:
-                    if Maker[0] not in MakerList:
-                        MakerList.append(Maker[0])
-                elif 'No Maker for Selected Parts' not in MakerList:
-                    MakerList.append('No Maker for Selected Parts')
-                else:
-                    pass
                            
+            AsmDict = {Asm[0]:Asm[1] for Asm in curRFQ.fetchall()}
+        AsmList = list(AsmDict)
+        MakerList = []
+        if AsmList:
+            for Asm in AsmList:
+                try: 
+                    MakerList.remove('No Maker for Selected Parts')
+                except ValueError:
+                    pass
+                curRFQ.execute(f"""
+                               SELECT `Maker` FROM `{ProjectCombo.get()}`.`{MachineCombo.get()}_{Asm}`
+                               """)
+                for Maker in curRFQ.fetchall():
+                    if Maker[0]:
+                        if Maker[0] not in MakerList:
+                            MakerList.append(Maker[0])
+                    elif 'No Maker for Selected Parts' not in MakerList:
+                        MakerList.append('No Maker for Selected Parts')
+                    else:
+                        pass
+                 
+        else:
+            MakerCombo.set('No Assembly for this Machine')                
             
         curRFQ.close()
         MakerCombo['value'] = MakerList
@@ -207,20 +230,29 @@ def openRFQ(tabNote,RFQ = None):
         MacQtyBox.configure(state="normal")
         MacQtyBox.delete(0,END)
         
+        
+        MacQtyBox.insert(END,MachineDict[MachineCombo.get()][1]) if MachineCombo.get() in MachineDict else None
+        MachineNameLabel['text'] = MachineDict[MachineCombo.get()][0] if MachineCombo.get() in MachineDict else ''
+        
         if MakerList:
             MakerCombo.current(0)
-            MacQtyBox.insert(END,MachineDict[MachineCombo.get()][1])
-            MachineNameLabel['text'] = MachineDict[MachineCombo.get()][0]
             
             SelectMakerPartsButton.configure(state = 'active')
+            CreateRFQButton.configure(state = 'active')
+            IssueRFQButton.configure(state = 'active')
             
         else :
             MakerCombo.set('No parts in Unit Assembly')
-            MachineNameLabel['text'] = ''
             
             SelectMakerPartsButton.configure(state = 'disabled')
+            CreateRFQButton.configure(state = 'disabled') 
+            IssueRFQButton.configure(state = 'disabled') 
             
         MacQtyBox.configure(state="readonly")
+        clearTreeUnit()
+        
+
+        
     def QueryMachNo(event) :
         _QueryMachNo()   
         _QueryMaker()
@@ -242,7 +274,8 @@ def openRFQ(tabNote,RFQ = None):
                 newrow = UnitTreeView.item(item)['values'].copy()
                 newrow[13] = Ccy
                 UnitTreeView.item(item, values=newrow)
-        
+            UnitTreeView.CalLineTotalPrice()
+            InsertReadonly(TotalSGDBox,"{:.2f}".format(round(float(UnitTreeView.TOTAL_TCURR)*float(CountryRef.getExRate(CurrencyCombo.get()))),2))
         else:
             pass
     
@@ -289,7 +322,7 @@ def openRFQ(tabNote,RFQ = None):
                                PartNum, Description, CLS,
                                Maker, Spec, V,  DES, SPA,
                                OH, REQ, PCH,  
-                               UnitCost, Currency, TotalUnitCost
+                               UnitCost, Currency, TotalUnitCost,Vendor
                                FROM `{ProjectCombo.get()}`.`{MachineCombo.get()}_{Asm}`
                                where Maker = "{_Maker}"
                                """)
@@ -300,29 +333,51 @@ def openRFQ(tabNote,RFQ = None):
                                PartNum, Description, CLS,
                                Maker, Spec, V,  DES, SPA,
                                OH, REQ, PCH,  
-                               UnitCost, Currency, TotalUnitCost
+                               UnitCost, Currency, TotalUnitCost,Vendor
                                FROM `{ProjectCombo.get()}`.`{MachineCombo.get()}_{Asm}`
                                """)
               
             
                         
             PartsList = curRFQ.fetchall()
+            PartsListRFQed = []
             for rec in PartsList:
-                UnitTreeView.insert(parent="", index=END, iid=rec[0], 
-                                values=(f'{ProjectCombo.get()}-{MachineCombo.get()}-{Asm}-' + rec[1], rec[2], rec[3],
-                                        rec[4], rec[5], rec[6], rec[7], rec[8],
-                                        rec[9], AsmDict[Asm] , rec[10], rec[11],
-                                        None if rec[12] == None else "{:.2f}".format(round(float(rec[12]), 2)),
-                                        rec[13], 
-                                        None if rec[14] == None else "{:.2f}".format(round(float(rec[14]), 2)),''))
-
+                FullPartNum = f'{ProjectCombo.get()}-{MachineCombo.get()}-{Asm}-' + rec[1] 
+                if not rec[15] or rec[15] == 'None':
+                    UnitTreeView.insert(parent="", index=END, iid=FullPartNum, 
+                                    values=(FullPartNum, rec[2], rec[3],
+                                            rec[4], rec[5], rec[6], rec[7], rec[8],
+                                            rec[9], AsmDict[Asm] , rec[10], rec[11],
+                                            None if rec[12] == None else "{:.2f}".format(round(float(rec[12]), 2)),
+                                            rec[13], 
+                                            None if rec[14] == None else "{:.2f}".format(round(float(rec[14]), 2)),''))
+                else:
+                    PartsListRFQed += [(FullPartNum, rec[2], rec[3],
+                                            rec[4], rec[5], rec[6], rec[7], rec[8],
+                                            rec[9], AsmDict[Asm] , rec[10], rec[11],
+                                            None if rec[12] == None else "{:.2f}".format(round(float(rec[12]), 2)),
+                                            rec[13], 
+                                            None if rec[14] == None else "{:.2f}".format(round(float(rec[14]), 2)),'')]
+            if PartsListRFQed:
+                if messagebox.askyesno('Select Maker Parts',
+                                    'Some Parts have already been RFQed\nDo you still want to add to Current RFQ?',
+                                    parent = RFQFrame):
+                    for rec in PartsListRFQed:
+                        UnitTreeView.insert(parent="", index=END, iid=rec[0], 
+                                        values=rec,checked = True)
+                    
+                    
             curRFQ.close()
             UnitTreeView.CalLineTotalPrice()
+            UnitTreeView.TreeViewSAVED = 0
             SumAllSGD()
             
     def clearTreeUnit():
         
         UnitTreeView.delete(*UnitTreeView.get_children())
+        UnitTreeView.CalLineTotalPrice()
+        InsertReadonly(TotalSGDBox,'')
+        UnitTreeView.TreeViewSAVED = 0
         
     def SaveCurrentParts():
         global CurrentRFQ
@@ -335,34 +390,37 @@ def openRFQ(tabNote,RFQ = None):
                                 INSERT INTO `rfq_master`.`{CurrentRFQ}`(
                                     `FullPartNum`,
                                     `UnitCost`,
-                                    `PM_oid`,
-                                    `Assem_Full`)
+                                    `PartNum`,
+                                    `Assem_Full`,
+                                    `PO`)
                                     VALUES """
-                for oid in UnitTreeView.get_children():
-                    FullPartNum = UnitTreeView.item(oid, 'values')[0]
-                    RFQUnitCost = 'NULL' if UnitTreeView.item(oid, 'values')[12] == 'None' else str(UnitTreeView.item(oid, 'values')[12] )
-                    PM_oid = oid
+                for iid in UnitTreeView.get_children():
+                    FullPartNum = UnitTreeView.item(iid, 'values')[0]
+                    PO = 1 if 'checked' in UnitTreeView.item(iid, 'tags') else 0
+                    RFQUnitCost = 'NULL' if UnitTreeView.item(iid, 'values')[12] == 'None' else "{:.2f}".format(round(float(UnitTreeView.item(iid, 'values')[12]),2)) 
+                    
                     PartInfo = FullPartNum.split('-',3)
                     Assem_Full = PartInfo[2]+'_'+PartInfo[3]
                 
                     MySqlCommand += f"""
                                 ('{FullPartNum}',
                                  {RFQUnitCost},
-                                 {PM_oid},
-                                 '{Assem_Full}')""" + ',' 
+                                 '{PartInfo[3]}',
+                                 '{Assem_Full}',
+                                 {PO})""" + ',' 
                     
                     
                 try: 
                     curRFQAddParts.execute(MySqlCommand[:-1])
                             
                     connRFQ.commit()
-                    CBTreeView.TreeViewSAVED = 1
+                    UnitTreeView.TreeViewSAVED = 1
                     #OpenCurrent(CurrentRFQ)
                     
         
                 except Error as e:
                     messagebox.showerror('Save Current Parts in RFQ',
-                                         f'Failed to save Part in RFQ\n({CurrentRFQ} : {FullPartNum})\n{e}',
+                                         f'Failed to save Part in RFQ\n({CurrentRFQ}){e}',
                                          parent = RFQFrame)
                     
                     connRFQ.rollback()
@@ -374,41 +432,96 @@ def openRFQ(tabNote,RFQ = None):
                                 'No RFQ Created, Please Create a New RFQ Entry',
                                 parent = RFQFrame)
         
-                
+    def SaveCurrentRFQ():
+        global CurrentRFQ
+        
+        
+        curRFQ = connRFQ.cursor()
+        if CurrentRFQ:
+            SaveCurrentParts()
+            RFQ_REF_NO = CurrentRFQ
+            PARTS_COMP = 0
+            TOTAL_PARTS = len(UnitTreeView.get_children())
+            VENDOR_NAME = VendorBox.get() if  VendorBox.get() else None
+            STATUS = 0
+            ISSUE_DATE = IssuedBox.get() if IssuedBox.get() else None
+            REPLY_DATE = ReplyDueCalEnt.get() if  ReplyDueCalEnt.get() else None
+            DELIVER_DATE = DeliverBCalEnt.get() if  DeliverBCalEnt.get() else None
+            DATE_OF_ENTRY = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            CURRENCY = CurrencyCombo.get() if  CurrencyCombo.get() else None
+            PURCHASER = PurchaserCombo.get()
+            TOTAL_TCURR = UnitTreeView.TOTAL_TCURR
+            TOTAL_SGD = float(TotalSGDBox.get()) if TotalSGDBox.get() != '' else None
+            try:    
+                curRFQ.execute("""UPDATE `rfq_master`.`rfq_list` SET
+                            `PARTS_COMP`= %s,
+                             `TOTAL_PARTS`= %s,
+                             `VENDOR_NAME`= %s,
+                             `STATUS`= %s,
+                             `ISSUE_DATE`= %s,
+                             `REPLY_DATE`= %s,
+                             `DELIVER_DATE`= %s,
+                             `DATE_OF_ENTRY`= %s,
+                             `CURRENCY`= %s, 
+                             `PURCHASER`= %s,
+                             `TOTAL_TCURR`= %s,
+                             `TOTAL_SGD` = %s
+                             WHERE `RFQ_REF_NO` = %s
+                                """, 
+                            (PARTS_COMP,TOTAL_PARTS, VENDOR_NAME,
+                             STATUS, ISSUE_DATE, REPLY_DATE, 
+                             DELIVER_DATE, DATE_OF_ENTRY,CURRENCY,
+                             PURCHASER, TOTAL_TCURR, TOTAL_SGD,RFQ_REF_NO))
+                messagebox.showinfo('Save Current Parts in RFQ',
+                                 f'Parts Saved in {CurrentRFQ}',
+                                 parent = RFQFrame)
+            except Error as e:
+                print(e)
+        else:
+            messagebox.showerror('Save Current Parts in RFQ',
+                                'No RFQ Created, Please Create a New RFQ Entry',
+                                parent = RFQFrame)
+        connRFQ.commit()
+        curRFQ.close()
         
         
     def OpenCurrent(RFQNo):
         global ProjList,MachineList,MakerList,AsmDict,CurrentRFQ
         
         curRFQ = connRFQ.cursor()
-        curRFQ.execute("""
-                           SELECT `RFQ_REF_NO` FROM `rfq_master`.`rfq_list` 
+        curRFQ.execute(f"""
+                           SELECT * FROM `rfq_master`.`rfq_list` where `RFQ_REF_NO` = '{RFQNo}'
                            """)
-        rfq_list = [RFQ[0] for RFQ in curRFQ.fetchall()]
+        rfq_list = curRFQ.fetchall()
         
-        if RFQNo in rfq_list:
+        if rfq_list:
+            CurrentRFQInfo = rfq_list[0] 
             
             CurrentRFQ = RFQNo
             curRFQ.execute(f"""
-                           SELECT `ASSEM_FULL`,`DES_QTY` FROM `{ProjectCombo.get()}`.`{MachineCombo.get()}`
+                           SELECT `ASSEM_FULL`,`DES_QTY` FROM `{CurrentRFQInfo[2]}`.`{CurrentRFQInfo[3]}`
                            """)
                            
             AsmDict = {Asm[0]:Asm[1] for Asm in curRFQ.fetchall()}
             
             
-            curRFQ.execute(f"""
-                           SELECT * FROM `rfq_master`.`rfq_list` where `RFQ_REF_NO` = '{RFQNo}'
-                           """)
-                           
-            CurrentRFQInfo = curRFQ.fetchall()[0] 
+
+            
+
+
 
             #print(CurrentRFQ)
             
             InsertReadonly(RFQRefBox,CurrentRFQInfo[1])
+            
+            ProjectCombo.configure(state='active')
             ProjectCombo.current(ProjList.index(CurrentRFQInfo[2]))
-            ProjectCombo.configure(state='disabled')
+            ProjectCombo.configure(state='disabled') 
+            _QueryMachNo()   
+            MachineCombo.configure(state='active')
             MachineCombo.current(MachineList.index(CurrentRFQInfo[3]))
             MachineCombo.configure(state='disabled')
+            _QueryMaker()
             InsertReadonly(MacQtyBox,CurrentRFQInfo[4])
             InsertReadonly(VendorBox,CurrentRFQInfo[7])
             InsertReadonly(StatusBox,StatusDict[int(CurrentRFQInfo[8])])
@@ -439,6 +552,7 @@ def openRFQ(tabNote,RFQ = None):
                 AsmID = PartKeyInfo[2]
                 PartNo = PartKeyInfo[3]
                 RFQUnitCost = Parts[1]
+                PO = Parts[4]
                 try : 
                     assert ProjID == CurrentRFQInfo[2] and MachID == CurrentRFQInfo[3]
                 except AssertionError as e:
@@ -457,23 +571,27 @@ def openRFQ(tabNote,RFQ = None):
                                    FROM `{ProjID}`.`{Assem_full}`
                                    where PartNum = {PartNo}
                                    """)
-                PartInfo = curRFQ.fetchall()[0] + (FullPartNum, AsmID)
+                PartInfo = curRFQ.fetchall()[0] + (FullPartNum, AsmID,RFQUnitCost, PO)
             
                 TreeViewParts.append(PartInfo)
                 
-            curRFQ.close()
+            
             #print(TreeViewParts)
             clearTreeUnit()
             for rec in TreeViewParts:
-                UnitTreeView.insert(parent="", index=END, iid=rec[0], 
+                UnitTreeView.insert(parent="", index=END, iid=rec[15], 
                                 values=(rec[15], rec[2], rec[3],
                                         rec[4], rec[5], rec[6], rec[7], rec[8],
                                         rec[9], AsmDict[rec[16]] , rec[10], rec[11],
-                                        None if rec[12] == None else "{:.2f}".format(round(float(rec[12]), 2)),
-                                        rec[13], 
+                                        None if rec[17] == None else "{:.2f}".format(round(float(rec[17]), 2)),
+                                        CurrentRFQInfo[13], 
                                         None if rec[14] == None else "{:.2f}".format(round(float(rec[14]), 2)),''))
-            CBTreeView.TreeViewSAVED = 1
-            CBTreeView.RFQIssued = 1 if CurrentRFQInfo[9] else 0
+                if rec[18]:
+                    UnitTreeView.tag_remove(rec[15], 'unchecked')
+                    UnitTreeView.tag_add(rec[15], ('checked',))
+                
+            UnitTreeView.TreeViewSAVED = 1
+            UnitTreeView.RFQIssued = 1 if CurrentRFQInfo[9] else 0
             
             if UnitTreeView.get_children():
                 UnitTreeView.CalLineTotalPrice()
@@ -484,8 +602,10 @@ def openRFQ(tabNote,RFQ = None):
                 NewRFQ()
             else:
                 RFQFrame.destroy()
-         
-    def CreateRFQEntry():
+                
+        curRFQ.close()
+            
+    def CreateRFQEntry(NewVendor = False):
         global CurrentRFQ,MachineList   
         
         if MachineList:
@@ -528,7 +648,10 @@ def openRFQ(tabNote,RFQ = None):
         MACH_DES_QTY = MacQtyBox.get() if MacQtyBox.get() else None
         PARTS_COMP = 0
         TOTAL_PARTS = len(UnitTreeView.get_children())
-        VENDOR_NAME = VendorBox.get() if  VendorBox.get() else None
+        if NewVendor:
+            VENDOR_NAME = None
+        else:
+            VENDOR_NAME = VendorBox.get() if  VendorBox.get() else None
         STATUS = 0
         ISSUE_DATE = None
         REPLY_DATE = ReplyDueCalEnt.get() if  ReplyDueCalEnt.get() else None
@@ -536,7 +659,7 @@ def openRFQ(tabNote,RFQ = None):
         DATE_OF_ENTRY = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         CURRENCY = CurrencyCombo.get() if  CurrencyCombo.get() else None
         PURCHASER = PurchaserCombo.get()
-        TOTAL_TCURR = None
+        TOTAL_TCURR = round(float(UnitTreeView.TOTAL_TCURR), 2)
         TOTAL_SGD = float(TotalSGDBox.get()) if TotalSGDBox.get() != '' else None
         try:    
             curRFQ.execute("""INSERT INTO `rfq_master`.`rfq_list`(
@@ -557,9 +680,9 @@ def openRFQ(tabNote,RFQ = None):
             curRFQ.execute(f"""CREATE TABLE IF NOT EXISTS `rfq_master`.`{CurrentRFQ}`
                            (`FullPartNum` VARCHAR(20) PRIMARY KEY,
                             `UnitCost` FLOAT DEFAULT 0.00,
-                            `PM_oid` int,
-                            `Assem_Full` VARCHAR(10)
-                            
+                            `PartNum` VARCHAR(10),
+                            `Assem_Full` VARCHAR(10),
+                            `PO` tinyint default 0
                             )
                         
                             ENGINE = InnoDB
@@ -570,91 +693,85 @@ def openRFQ(tabNote,RFQ = None):
             messagebox.showerror('Create New RFQ Entry',
                                  f'Failed to Create RFQ\n({CurrentRFQ})\n{e}',
                                  parent = RFQFrame)
-            print('Inserting into RFQ List and Adding RFQ Table')
             connRFQ.rollback()
             return
             
         curRFQ.close()
+        ProjectCombo.configure(state='disabled') 
+        MachineCombo.configure(state='disabled')
         SaveCurrentParts()
         messagebox.showinfo('Create New RFQ Entry',f'{CurrentRFQ} created successful',parent = RFQFrame)
         OpenCurrent(CurrentRFQ)
     
     def ConfirmCreateRFQ():
-        if messagebox.askyesno('Create New RFQ Entry','Confirm Create?',parent = RFQFrame):
-            CreateRFQEntry()
-        
-    def SaveUnitPriceToRFQ():
         global CurrentRFQ
-        SaveCurrentParts()
-        messagebox.showinfo('Save Current Parts in RFQ',
-                             f'Parts Saved in {CurrentRFQ}',
-                             parent = RFQFrame)
+        RFQExist = ''
+        if CurrentRFQ:
+            RFQExist = f'Current RFQ already exist ({CurrentRFQ})\n'
         
+        if messagebox.askyesno('Create New RFQ Entry',f'{RFQExist}Confirm Create?',parent = RFQFrame):
+            CreateRFQEntry()
+
         
     
     def SaveVendorUnitCostToPM():
         global CurrentRFQ
-        if messagebox.askyesno('Save Current Parts and Export to Project Manager',
-                               f'Do you want to export parts\nfrom ({CurrentRFQ}) to Project Manager?'
-                               ,parent = RFQFrame):
-            try:
-                SaveCurrentParts()
-                    
-                messagebox.showinfo('Save Current Parts in RFQ',
-                                     f'Parts Saved in {CurrentRFQ}',
-                                     parent = RFQFrame)
-                
-                curRFQ = connRFQ.cursor()
-                
-                assert any(['checked' in UnitTreeView.item(oid, 'tags') for oid in UnitTreeView.get_children()]) and CBTreeView.TreeViewSAVED
-
-                
-                if UnitTreeView.get_children():
-                    for oid in UnitTreeView.get_children(): 
-                        PartInfo = UnitTreeView.item(oid, 'values')
-                        FullPartNum = PartInfo[0]
-                        Vendor = 'NULL'
-                        PM_oid = oid
-                        KeyPartInfo = FullPartNum.split('-',3)
-                        ProjID = KeyPartInfo[0]
-                        MachID = KeyPartInfo[1]
-                        AsmID = KeyPartInfo[2]
-                        PartNo = KeyPartInfo[3]
-                        Assem_Full = KeyPartInfo[1]+'_'+KeyPartInfo[2]
-                        if 'checked' in UnitTreeView.item(oid, 'tags'):
-                            Vendor = f"'{VendorBox.get()}'" if  VendorBox.get() else 'NULL'
-                        
-                        print(float(CountryRef.getExRate(PartInfo[13]) )* float(PartInfo[14]))
-                        curRFQ.execute(f"""UPDATE `{ProjID}`.`{Assem_Full}` PM
-                                           INNER JOIN `rfq_master`.`{CurrentRFQ}` RFQ
-                                           ON `PM`.`oid` = `RFQ`.`PM_oid`
-                                           SET `PM`.`UnitCost` = `RFQ`.`UnitCost`,
-                                               `PM`.`TotalUnitCost` =  {PartInfo[14]},
-                                               `PM`.`Currency` = '{PartInfo[13]}',
-                                               `PM`.`ExchangeRate` =  {CountryRef.getExRate(PartInfo[13])},
-                                               `PM`.`TotalSGD` = {float(CountryRef.getExRate(PartInfo[13]) )* float(PartInfo[14])} ,
-                                                `PM`.`Vendor` = 
-                                                 """ + Vendor)
-               
-                        
-                RFQList = [RFQ[0] for RFQ in curRFQ.fetchall()]
-                ProjMachID = str(ProjectCombo.get()) + str(MachineCombo.get())
-                connRFQ.commit()
-                curRFQ.close()
-                
-                OpenCurrent(CurrentRFQ)
-            except Error as e:
-                print(e)
-                
-            except AssertionError as e:
-                messagebox.showerror('Save Current Parts and Export to Project Manager','Please ensure RFQ is Issued and Parts are selected',parent = RFQFrame)
-             
-            
-        else:
-            messagebox.showinfo('Save Changes to RFQ',f'No Changes made to RFQ ({CurrentRFQ}) ',parent = RFQFrame)
-            
+        curRFQ = connRFQ.cursor()
+        if CurrentRFQ:
         
+            if messagebox.askyesno('Save Current Parts and Export to Project Manager',
+                                   f'Do you want to export parts\nfrom ({CurrentRFQ}) to Project Manager?'
+                                   ,parent = RFQFrame):
+                try:
+                    SaveCurrentRFQ()
+                
                     
+                    
+                    assert any(['checked' in UnitTreeView.item(iid, 'tags') for iid in UnitTreeView.get_children()]) and UnitTreeView.TreeViewSAVED
+    
+                    
+                    if UnitTreeView.get_children():
+                        for iid in UnitTreeView.get_children(): 
+                            PartInfo = UnitTreeView.item(iid, 'values')
+                            FullPartNum = PartInfo[0]
+                            Vendor = 'NULL'
+                            KeyPartInfo = FullPartNum.split('-',3)
+                            ProjID = KeyPartInfo[0]
+                            MachID = KeyPartInfo[1]
+                            AsmID = KeyPartInfo[2]
+                            PartNo = KeyPartInfo[3]
+                            Assem_Full = KeyPartInfo[1]+'_'+KeyPartInfo[2]
+                            if 'checked' in UnitTreeView.item(iid, 'tags'):
+                                Vendor = f"'{VendorBox.get()}'" if  VendorBox.get() else 'NULL'
+                            
+                            curRFQ.execute(f"""UPDATE `{ProjID}`.`{Assem_Full}` PM
+                                               INNER JOIN `rfq_master`.`{CurrentRFQ}` RFQ
+                                               ON `PM`.`PartNum` = `RFQ`.`PartNum`
+                                               SET `PM`.`UnitCost` = `RFQ`.`UnitCost`,
+                                                       `PM`.`TotalUnitCost` =  {PartInfo[14]},
+                                                       `PM`.`Currency` = '{PartInfo[13]}',
+                                                       `PM`.`ExchangeRate` =  {CountryRef.getExRate(PartInfo[13])},
+                                                       `PM`.`TotalSGD` = {float(CountryRef.getExRate(PartInfo[13]) )* float(PartInfo[14])} ,
+                                                        `PM`.`Vendor` = 
+                                                         """ + Vendor)
+                       
+                    
+                    connRFQ.commit()
+                    
+                    
+                    OpenCurrent(CurrentRFQ)
+                except Error as e:
+                    print(e)
+                    
+                except AssertionError as e:
+                    messagebox.showerror('Save Current Parts and Export to Project Manager','Please ensure RFQ is Issued and Parts are selected',parent = RFQFrame)
+                 
+                
+            else:
+                messagebox.showinfo('Save Changes to RFQ',f'No Changes made to RFQ ({CurrentRFQ})\n and Machine {ProjectCombo.get()}-{MachineCombo.get()} ',parent = RFQFrame)
+                
+        
+        curRFQ.close()            
         #OpenCurrent(CurrentRFQ)
         
     def SelectPuchaseAll():
@@ -664,11 +781,12 @@ def openRFQ(tabNote,RFQ = None):
         
         
     def SumAllSGD():
+        global CurrentRFQ
         UnitTreeView.CalLineTotalPrice()
         TotalSGD = 0
         if UnitTreeView.get_children():
-            for oid in UnitTreeView.get_children():
-                PartInfo = UnitTreeView.item(oid,'values')
+            for iid in UnitTreeView.get_children():
+                PartInfo = UnitTreeView.item(iid,'values')
                 TotalSGD += float(CountryRef.getExRate(PartInfo[13])) * float(PartInfo[14])
             
             InsertReadonly(TotalSGDBox,"{:.2f}".format(round(float(TotalSGD), 2)))
@@ -676,26 +794,92 @@ def openRFQ(tabNote,RFQ = None):
         else:
             InsertReadonly(TotalSGDBox,'')
             
+    def SaveRFQasPDF():
+        
+        PartsList = []
+        for iid in UnitTreeView.get_children():
+            PartInfo = UnitTreeView.item(iid,'values')
+            PartsList+=[[PartInfo[0],
+                        PartInfo[1],
+                        PartInfo[3],
+                        PartInfo[4],
+                        PartInfo[10]
+                        ]]
+            
+            
+        FileDir  = os.path.join(os.path.join(os.getcwd(),'temp'), CurrentRFQ +'.csv') 
+        with open(f"{FileDir}","w", newline="") as f:
+            theWriter = csv.writer(f,lineterminator='\n')
+            theWriter.writerow(['PartNum','Description','Maker','Maker Specification','Quatitiy'])
+            for rec in PartsList:
+                print(rec)
+                theWriter.writerow(rec)
+            f.close()
+            
     def IssueRFQ():
         global CurrentRFQ
-        if CBTreeView.TreeViewSAVED: 
-            pass
-        else:
-            SaveCurrentParts()
             
         if CurrentRFQ:
-            if IssuedBox.get() and CBTreeView.RFQIssued:
-                if messagebox.askyesno('Issue RFQ',f'This RFQ has been issued, Do you want to issue again?\n({CurrentRFQ}) '):
-                    InsertReadonly(IssuedBox,'2021-07-20')
-                    CBTreeView.RFQIssued = 1
-            else:
-                InsertReadonly(IssuedBox,'2021-07-19')
-                CBTreeView.RFQIssued = 1
+            try:
+                assert ReplyDueCalEnt.get() and VendorBox.get()
                 
+            except:
+                messagebox.showerror('Issue RFQ','Please ensure you choose a Vendor and Reply Date',parent = RFQFrame)
+                return
+            
+            SaveCurrentRFQ()
+            curRFQ = connRFQ.cursor()
+            
+            if IssuedBox.get() and UnitTreeView.RFQIssued:
+                if messagebox.askyesno('Issue RFQ',f'This RFQ has been issued, Do you want to issue again?\n({CurrentRFQ})',parent = RFQFrame):
+                    SaveRFQasPDF()
+            
+                    IssueEmail(CurrentRFQ = CurrentRFQ,Purchaser = PurchaserNameBox.get(),Vendor = VendorBox.get())
+                    InsertReadonly(IssuedBox,datetime.now().strftime('%Y-%m-%d'))
+                    
+                    curRFQ.execute("""UPDATE `rfq_master`.`rfq_list` SET
+                             `STATUS`= %s,
+                             `ISSUE_DATE`= %s
+                             WHERE `RFQ_REF_NO` = %s
+                                """, 
+                            (1, datetime.now().strftime('%Y-%m-%d'),CurrentRFQ))
+                    connRFQ.commit()
+                    
+                    UnitTreeView.RFQIssued = 1
+            else:
+                SaveRFQasPDF()
+            
+                IssueEmail(CurrentRFQ = CurrentRFQ,Purchaser = PurchaserNameBox.get(),Vendor = VendorBox.get())
+                InsertReadonly(IssuedBox,datetime.now().strftime('%Y-%m-%d'))
+                curRFQ.execute("""UPDATE `rfq_master`.`rfq_list` SET
+                             `STATUS`= %s,
+                             `ISSUE_DATE`= %s
+                             WHERE `RFQ_REF_NO` = %s
+                                """, 
+                            (1, datetime.now().strftime('%Y-%m-%d'),CurrentRFQ))
+                connRFQ.commit()
+                UnitTreeView.RFQIssued = 1
+            curRFQ.close()    
         else:
             messagebox.showerror('Issue RFQ','Please Create/Select RFQ to Issue',parent = RFQFrame)
+        
+    def RFQNewVendor():
+        if messagebox.askyesno('Create New RFQ','This RFQ has been issued, Do you want duplicate this RFQ for another Vendor?)',parent = RFQFrame):
+                    
+            CreateRFQEntry(NewVendor=True)
+        else:
+            pass
             
+    def CloseTab():
+        global CurrentRFQ
+        if messagebox.askyesno('Close Tab',f'Do you want to save and before closing this RFQ tab?\n({CurrentRFQ if CurrentRFQ else None})',parent = RFQFrame):
+            SaveCurrentRFQ()
+            RFQFrame.destroy()
+            CurrentRFQ = None
             
+        else:
+            RFQFrame.destroy()
+            CurrentRFQ = None
              
             
     Frame1 = LabelFrame(RFQFrame)
@@ -847,13 +1031,19 @@ def openRFQ(tabNote,RFQ = None):
     BottomTreeFrame.pack(side= BOTTOM, fill=BOTH,expand = True)
     BottomTreeFrame.columnconfigure(0, weight=1)
     
+    TotalSGDLabel = Label(BottomTreeFrame,text = 'Total SGD',font = ('Arial 10 bold'))
+    TotalSGDLabel.grid(row = 0, column = 1,pady =4,padx = 10,sticky = E)
+    
+    TotalSGDBox = Entry(BottomTreeFrame,width=24,state = "readonly",font = ('Arial 10 bold'),justify=RIGHT)
+    TotalSGDBox.grid(row = 0, column = 2, padx = 4,pady =4,sticky = W) 
+    
     Button(TopFrame,text = 'Select All',command = SelectPuchaseAll).pack(side = RIGHT,padx = (4,8) ,pady =4)
     
     UnitTreeScroll = Scrollbar(Frame3)
     UnitTreeScroll.pack(side=RIGHT, fill=Y)
     
     UnitTreeView = CbTreeview(Frame3, yscrollcommand=UnitTreeScroll.set, 
-                                selectmode="browse")
+                                selectmode="browse", TotalSGDBox = TotalSGDBox)
     UnitTreeScroll.config(command=UnitTreeView.yview)
     
     UnitTreeView.pack(padx=2, pady=2,fill="x", expand=True)
@@ -867,7 +1057,6 @@ def openRFQ(tabNote,RFQ = None):
                                 "UnitCost", "Curr","Total","PO")
     
     UnitTreeView.column("#0", width=0, stretch=NO)
-    # UnitTreeView.column("#0", width=50, anchor=W,stretch=NO)
     UnitTreeView.column("Part No", anchor=W, width=80)
     UnitTreeView.column("Description", anchor=W, width=140)
     UnitTreeView.column("CLS", anchor=CENTER, width=50)
@@ -900,7 +1089,7 @@ def openRFQ(tabNote,RFQ = None):
     UnitTreeView.heading("REQ", text="REQ", anchor=E)
     UnitTreeView.heading("PCH", text="PCH", anchor=E)
     UnitTreeView.heading("UnitCost", text="Unit Cost", anchor=E)
-    UnitTreeView.heading("Curr", text="Ccy", anchor=W)
+    UnitTreeView.heading("Curr", text="Curr", anchor=W)
     UnitTreeView.heading("Total", text="Total Cost", anchor=E)
     UnitTreeView.heading("PO", text="PO", anchor=CENTER)
     
@@ -908,45 +1097,271 @@ def openRFQ(tabNote,RFQ = None):
     BlankBox = Entry(BottomTreeFrame,state = "readonly" )
     BlankBox.grid(row = 0, column = 0,pady =4,sticky = EW)
     
-    TotalSGDLabel = Label(BottomTreeFrame,text = 'Total SGD',font = ('Arial 10 bold'))
-    TotalSGDLabel.grid(row = 0, column = 1,pady =4,padx = 10,sticky = E)
-    
-    TotalSGDBox = Entry(BottomTreeFrame,width=24,state = "readonly",font = ('Arial 10 bold'),justify=RIGHT)
-    TotalSGDBox.grid(row = 0, column = 2, padx = 4,pady =4,sticky = W) 
-    
     ClearPartsButton = Button(BottomTreeFrame,text = 'Clear Parts', width=14,command = clearTreeUnit)
     ClearPartsButton.grid(row = 0, column = 3, padx = (4,8) ,pady =4,sticky = W) 
     
     Frame4 = Frame(RFQFrame)
-    Frame4.columnconfigure(2, weight=1)
+    Frame4.columnconfigure(3, weight=1)
     Frame4.grid(row = 3, column = 0, ipadx = 10, ipady = 6,pady = (6,0), padx = 6,sticky =EW)
     
-    CreateRFQButton = Button(Frame4,text = 'Create RFQ',width = 16,command = ConfirmCreateRFQ)
+    CreateRFQButton = Button(Frame4,text = 'Create RFQ',width = 14,command = ConfirmCreateRFQ)
     CreateRFQButton.grid(row = 0, column = 0)
     
-    IssueRFQButton = Button(Frame4,text = 'Issue RFQ' ,width = 16,command = IssueRFQ)
+    IssueRFQButton = Button(Frame4,text = 'Issue RFQ' ,width = 14,command = IssueRFQ)
     IssueRFQButton.grid(row = 0, column = 1,padx = 8, pady = 6)
+    
+    DuplicateRFQButton = Button(Frame4,text = 'Duplicate RFQ' ,width = 14,command = RFQNewVendor)
+    DuplicateRFQButton.grid(row = 0, column = 2,padx = 8, pady = 6)
 
-    SaveRFQPartsButton = Button(Frame4,text = 'Save RFQ' ,width = 16, command = SaveUnitPriceToRFQ)
-    SaveRFQPartsButton.grid(row = 0, column = 3,padx = 8, pady = 6)
+    SaveRFQPartsButton = Button(Frame4,text = 'Save RFQ' ,width = 14, command = SaveCurrentRFQ)
+    SaveRFQPartsButton.grid(row = 0, column = 4,padx = 8, pady = 6)
 
-    SavePMButton = Button(Frame4,text = 'Save to PM' ,width = 16, command = SaveVendorUnitCostToPM)
-    SavePMButton.grid(row = 0, column = 4,padx = 8, pady = 6)
+    SavePMButton = Button(Frame4,text = 'Save to PM' ,width = 14, command = SaveVendorUnitCostToPM)
+    SavePMButton.grid(row = 0, column = 5,padx = 8, pady = 6)
         
-    RefreshButton = Button(Frame4,text = 'Refresh' ,width = 16,command = Refresh)
-    RefreshButton.grid(row = 0, column = 5,padx = (8,0), pady = 6)
+    RefreshButton = Button(Frame4,text = 'Refresh' ,width = 14,command = Refresh)
+    RefreshButton.grid(row = 0, column = 6,padx = (8,0), pady = 6)
 
-    CloseButton = Button(Frame4,text = 'Close Tab' ,width = 16,command = lambda :RFQFrame.destroy())
-    CloseButton.grid(row = 0, column = 6,padx = (8,0), pady = 6)
+    CloseButton = Button(Frame4,text = 'Close Tab' ,width = 14,command = CloseTab)
+    CloseButton.grid(row = 0, column = 7,padx = (8,0), pady = 6)
+    
+    if CurrentRFQ:
+        UnitTreeView.TreeViewSAVED = 1
     
     Refresh()
     
 
 
 def reviewRFQ(tabNote):
-    #OpenRFQ window show all RFQ and choose RFQ
-    openRFQ(tabNote, RFQ = '')
+    ReviewRFQFrame = Frame(tabNote)
+    tabNote.add(ReviewRFQFrame, text="Review All RFQ")
+    ReviewRFQFrame.columnconfigure(0, weight=1)
+    tabNote.select(ReviewRFQFrame)
+   
+    style = ttk.Style()
+    style.theme_use("clam")
+    
+    style.configure("Treeview",
+                    background="silver",
+                    rowheight=20,
+                    fieldbackground="light grey")
+    
+    style.map("Treeview")
+    
+    def RefreshTreeView(SearchCrit= None,Search = None):
+        clearTreeUnit()
+        curRFQ = connRFQ.cursor()
+        
+        if SearchCrit and Search: 
+            curRFQ.execute(f"""SELECT `RFQ`.`oid`,`RFQ_REF_NO`,`PROJECT_CLS_ID`,`MACH_ID`,`MACH_DES_QTY`,`PARTS_COMP`,
+                             `TOTAL_PARTS`,`VENDOR_NAME`,`RFQ`.`STATUS`,`ISSUE_DATE`,`REPLY_DATE`,
+                             `DATE_OF_ENTRY`,`TOTAL_TCURR`,`CURRENCY`,`TOTAL_SGD`,`EM`.`EMPLOYEE_NAME`
+                              FROM `rfq_master`.`rfq_list` `RFQ`
+                              LEFT JOIN `index_emp_master`.`emp_data` `EM`
+                              ON `EM`.`EMPLOYEE_ID` = `RFQ`.`PURCHASER`
+                              WHERE {SearchCrit} = '{Search}'
+                              ORDER BY `PROJECT_CLS_ID` ASC,`MACH_ID` ASC,`DATE_OF_ENTRY` ASC
+                              """)
+                              
+        else:
+            
+            curRFQ.execute("""
+                           SELECT `RFQ`.`oid`,`RFQ_REF_NO`,`PROJECT_CLS_ID`,`MACH_ID`,`MACH_DES_QTY`,`PARTS_COMP`,
+                             `TOTAL_PARTS`,`VENDOR_NAME`,`RFQ`.`STATUS`,`ISSUE_DATE`,`REPLY_DATE`,
+                             `DATE_OF_ENTRY`,`TOTAL_TCURR`,`CURRENCY`,`TOTAL_SGD`,`EM`.`EMPLOYEE_NAME`
+                          FROM `rfq_master`.`rfq_list` `RFQ`
+                          LEFT JOIN `index_emp_master`.`emp_data` `EM`
+                          ON `EM`.`EMPLOYEE_ID` = `RFQ`.`PURCHASER`
+                          ORDER BY `PROJECT_CLS_ID` ASC,`MACH_ID` ASC,`DATE_OF_ENTRY` ASC
+                           """)
 
+            
+                        
+        RFQList = curRFQ.fetchall()
+        for rec in RFQList:
+            RFQTreeView.insert(parent="", index=END, iid=rec[0], 
+                            values=(rec[1], rec[2], rec[3],
+                                    rec[4], rec[5], rec[6], rec[7], rec[8],
+                                    rec[9], rec[10], rec[11], rec[12],rec[13],
+                                    rec[14],rec[15]))
+                
+ 
+        curRFQ.close()
+        
+    def SearchCombCompList(e):
+        CritIndex = RFQTreeView["columns"].index(SearchCombo.get())
+        CompList = []
+        for iid in RFQTreeView.get_children():
+            CritName = RFQTreeView.item(iid,'values')[CritIndex]
+            if CritName not in CompList:
+                
+                CompList+=[CritName]
+            
+        SearchEntry.set_completion_list(CompList)
+        
+    def clearTreeUnit():
+        
+        RFQTreeView.delete(*RFQTreeView.get_children())
+        
+            
+    def openRFQTab():
+        selectVal= RFQTreeView.selection()
+        if selectVal == ():
+            messagebox.showwarning("Unable to Load", "Please Select a RFQ",
+                                   parent=ReviewRFQFrame)
+        else:
+            openRFQ(tabNote,RFQ = RFQTreeView.item(selectVal[0],'values')[0])
+    
+    def SearchwCrit():
+        RefreshTreeView(SearchCrit=SearchDict[SearchCombo.get()], Search=SearchEntry.get())
+        
+    def DeleteRFQ():
+        selectVal= RFQTreeView.selection()
+        if selectVal == ():
+            messagebox.showwarning("Unable to Delete", "Please Select a RFQ",
+                                   parent=ReviewRFQFrame)
+        else:
+            oid = selectVal[0]
+            RFQNo = RFQTreeView.item(oid,'values')[0]
+            if messagebox.askyesno('Delete RFQ',f'Confirm Delete {RFQNo}?',parent = ReviewRFQFrame):
+                curRFQ = connRFQ.cursor()
+                try:
+                    curRFQ.execute(f"""
+                                   DELETE FROM `rfq_master`.`rfq_list`
+                                   WHERE `oid` = {oid}
+                                   """)
+                    connRFQ.commit()
+                    
+                    curRFQ.execute(f"""
+                                   DROP TABLE  IF EXISTS `rfq_master`.`{RFQNo}`
+                                   """)
+                    connRFQ.commit()
+                except Error as e:
+                    connRFQ.rollback()
+                    print(e)
+        
+                curRFQ.close()
+                RefreshTreeView()
+                
+    def CreateNewRFQ():
+        openRFQ(tabNote)
+        
+        
+    def CloseTab():
+        ReviewRFQFrame.destroy()
+    
+    Frame1 = LabelFrame(ReviewRFQFrame)
+    Frame1.columnconfigure(1, weight=1)
+    Frame1.grid(row = 0, column = 0, ipadx = 10, ipady = 6,pady = (6,0), padx = 6,sticky =EW)
+    
+    Frame2 = LabelFrame(ReviewRFQFrame,relief = 'ridge')
+    Frame2.columnconfigure(1, weight=1)
+    Frame2.grid(row = 1, column = 0, ipadx = 10, ipady = 6,pady = (6,0), padx = 6,sticky =EW)
+    
+    TopTreeFrame = Frame(Frame2)
+    TopTreeFrame.pack(side = TOP, fill=BOTH,expand = True)
+    TopTreeFrame.columnconfigure(0, weight=1)
+
+    BottomTreeFrame = Frame(Frame2)
+    BottomTreeFrame.pack(side= BOTTOM, fill=BOTH,expand = True)
+    BottomTreeFrame.columnconfigure(0, weight=1)
+
+    
+    RFQTreeScroll = Scrollbar(Frame2)
+    RFQTreeScroll.pack(side=RIGHT, fill=Y)
+    
+    RFQTreeView = ttk.Treeview(Frame2, yscrollcommand=RFQTreeScroll.set, 
+                                selectmode="browse")
+    RFQTreeScroll.config(command=RFQTreeView.yview)
+    
+    RFQTreeView.pack(padx=2, pady=2,fill="x", expand=True)
+    
+    RFQTreeView['show'] = 'headings'
+    
+    RFQTreeView["columns"] = ("RFQ Number", "Project ID", "Machine",  
+                                "Mach QTY", "Parts Comp","Total Parts", "Vendor", "Status", 
+                                "Issue Date","Reply Date", "Entry Date", "Total Cost" , "Curr",
+                                "Total SGD","Purchaser")
+    
+        
+    RFQTreeView.column("#0", width=0, stretch=NO)
+    RFQTreeView.column("RFQ Number", anchor=W, width=100)
+    RFQTreeView.column("Project ID", anchor=W, width=80)
+    RFQTreeView.column("Machine", anchor=W, width=80)
+    RFQTreeView.column("Mach QTY", anchor=CENTER, width=30)
+    RFQTreeView.column("Parts Comp", anchor=CENTER, width=30)
+    RFQTreeView.column("Total Parts", anchor=CENTER, width=30)
+    RFQTreeView.column("Vendor", anchor=W, width=80)
+    RFQTreeView.column("Status", anchor=CENTER, width=40)
+    RFQTreeView.column("Issue Date", anchor=CENTER, width=80)
+    RFQTreeView.column("Reply Date", anchor=CENTER, width=80)
+    RFQTreeView.column("Entry Date", anchor=CENTER, width=80)
+    RFQTreeView.column("Total Cost", anchor=E, width=80)
+    RFQTreeView.column("Curr", anchor=CENTER, width=30)
+    RFQTreeView.column("Total SGD", anchor=E, width=80)
+    RFQTreeView.column("Purchaser", anchor=W, width=80)
+    
+    
+    RFQTreeView.heading("#0", text="Index", anchor=W)
+    RFQTreeView.heading("RFQ Number", text="RFQ Number", anchor=W)
+    RFQTreeView.heading("Project ID", text="Project ID", anchor=W)
+    RFQTreeView.heading("Machine", text="Machine", anchor=W)
+    RFQTreeView.heading("Mach QTY", text="Mach QTY", anchor=CENTER)
+    RFQTreeView.heading("Parts Comp", text="Parts Comp", anchor=CENTER) 
+    RFQTreeView.heading("Total Parts", text="Total Parts", anchor=CENTER)
+    RFQTreeView.heading("Vendor", text="Vendor", anchor=W)
+    RFQTreeView.heading("Status", text="Status", anchor=CENTER)
+    RFQTreeView.heading("Issue Date", text="Issue Date", anchor=CENTER)
+    RFQTreeView.heading("Reply Date", text="Reply Date", anchor=CENTER)
+    RFQTreeView.heading("Entry Date", text="Entry Date", anchor=CENTER)
+    RFQTreeView.heading("Total Cost", text="Total Cost", anchor=E)
+    RFQTreeView.heading("Curr", text="Curr", anchor=CENTER)
+    RFQTreeView.heading("Total SGD", text="Total SGD", anchor=E)
+    RFQTreeView.heading("Purchaser", text="Purchaser", anchor=W)
+    
+    RFQTreeView.bind('<Double-Button-1>',lambda e: openRFQTab())
+    
+    RefreshTreeView()
+    
+    Frame3 = Frame(ReviewRFQFrame)
+    Frame3.columnconfigure(1, weight=1)
+    Frame3.grid(row = 2, column = 0, ipadx = 10, ipady = 6,pady = (6,0), padx = 6,sticky =EW)
+    
+    SearchDict = {'RFQ Number': 'RFQ_REF_NO', 
+                  'Project ID': 'PROJECT_CLS_ID',
+                  'Vendor': 'VENDOR_NAME',
+                  'Currency': 'CURRENCY'}
+    
+    SearchLabel = Label(Frame3, text = 'Search :')
+    SearchLabel.pack(side = LEFT,pady = 6)
+    
+    SearchCombo = ttk.Combobox(Frame3, value = list(SearchDict) ,width = 16,state = 'readonly')
+    SearchCombo.pack(side = LEFT,pady = 6)
+    SearchCombo.bind("<<ComboboxSelected>>", SearchCombCompList)
+    
+
+    SearchEntry = AutocompleteEntry(Frame3)
+    SearchEntry.set_completion_list(['abc','cde'])
+    SearchEntry.pack(side = LEFT,padx = 10,pady = 6)
+    SearchEntry.bind("<Return>", SearchwCrit)
+    
+    SearchButton = Button(Frame3, text= 'Search', command = SearchwCrit,width = 14)
+    SearchButton.pack(side = LEFT,padx = 10,pady = 6)
+    
+    ShowAllButton = Button(Frame3, text= 'Show All', command = RefreshTreeView,width = 14)
+    ShowAllButton.pack(side = LEFT,padx = 10,pady = 6)
+    
+    CloseTabButton  = Button(Frame3, text= 'Close Tab', command = CloseTab,width = 14)
+    CloseTabButton.pack(side = RIGHT,pady = 6,padx = (0,10))
+    
+    LoadRFQButton  = Button(Frame3, text= 'Load RFQ', command = openRFQTab,width = 14)
+    LoadRFQButton.pack(side = RIGHT,pady = 6,padx = 10)
+
+    DeleteRFQButton  = Button(Frame3, text= 'Delete RFQ', command = DeleteRFQ,width = 14)
+    DeleteRFQButton.pack(side = RIGHT,pady = 6,padx = 10)
+
+    CreateRFQButton = Button(Frame3, text= 'Create RFQ', command = CreateNewRFQ,width = 14)
+    CreateRFQButton.pack(side = RIGHT,pady = 6,padx = 10)
 
 def _SelectVendor(VendorBox,VendorAddressBox,VendorNameLabel):
     global img
@@ -960,6 +1375,7 @@ def _SelectVendor(VendorBox,VendorAddressBox,VendorNameLabel):
                     """)
     VendList = curVend.fetchall()
     VendDict = {Vend[1]:Vend for Vend in VendList}
+    curVend.close()
     
     VendWin = Toplevel()    
     VendWin.title("Vendor Manager")
@@ -1002,11 +1418,11 @@ def _SelectVendor(VendorBox,VendorAddressBox,VendorNameLabel):
                                     text=Vend[0], values=(Vend[1], Vend[2], 
                                                           statLst[Vend[18]]))
 
-    global curVEND
-    curVEND = None
+    global currVEND
+    currVEND = None
     def selectItem(event):
-        global curVEND
-        curVEND =VendorSelectionTree.item(VendorSelectionTree.focus())['values']
+        global currVEND
+        currVEND =VendorSelectionTree.item(VendorSelectionTree.focus())['values']
 
         
     VendorSelectionTree.bind('<ButtonRelease-1>', selectItem) 
@@ -1035,12 +1451,10 @@ def _SelectVendor(VendorBox,VendorAddressBox,VendorNameLabel):
     SearchButton.grid(row=0, column = 2)
 
     def SelectedVend(VendorBox,VendorAddressBox,VendorNameLabel):
-        global curVEND
-        Vend = VendDict[curVEND[0]]
+        global currVEND
+        Vend = VendDict[currVEND[0]]
         try:
-            print(Vend)
             VendAddress = Vend[8]+','+Vend[9]+','+Vend[6]+','+Vend[5]+','+Vend[7]+','+Vend[4]
-            print(VendAddress)
             InsertReadonly(VendorBox,Vend[1])
             InsertReadonly(VendorAddressBox,VendAddress)
             
@@ -1050,7 +1464,7 @@ def _SelectVendor(VendorBox,VendorAddressBox,VendorNameLabel):
             
             VendWin.destroy()
         except:
-            if curVEND:
+            if currVEND:
                 messagebox.showwarning("No Vendor Selected", "Please Select a Vendor", 
                                    parent=VendWin)
             else:
@@ -1123,6 +1537,7 @@ if __name__ == "__main__":
     global tabNote
     tabNote = ttk.Notebook(root)
     tabNote.grid(row=0, column=0, sticky="NSEW") 
+    reviewRFQ(tabNote)
     openRFQ(tabNote)
     root.mainloop()
     
