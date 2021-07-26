@@ -12,6 +12,8 @@ import re
 import ConnConfig
 import CountryRef
 from xerogui.config import OverWrite,CLIENT_ID,CLIENT_SECRET,XERO_EMAIL,CHROME_DRIVER_LOCATION
+import win32com
+import win32com.clinet as client
 
 logininfo = (ConnConfig.host,ConnConfig.username,ConnConfig.password)
 
