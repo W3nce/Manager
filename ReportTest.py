@@ -553,7 +553,7 @@ def openPurchase():
             OrderTreeView.insert(parent=f"M{rec[1][5:9]}", index=END, iid=rec[0], text="", 
                                   values=(rec[1], rec[2], rec[3], addressFull, rec[5],
                                           boolLst[rec[10]], 
-                                          f"{rec[11]} SGD"))
+                                          f"{rec[11]} SGD"))            
         curVend.close()
         
     def updateOrderCcy():
@@ -1619,6 +1619,25 @@ def openPurchase():
 
 
 
+        def checkIssueStat():
+            curPur = connPur.cursor()
+
+            sqlOrderStat = f"""UPDATE PUR_ORDER_LIST SET
+            `IssueStat` = %s,
+            `OrderStat` = %s
+
+            WHERE `oid` = %s"""
+            
+            StatInput = (1, 3, loadOrderSelect)
+            
+            curPur.execute(sqlOrderStat, StatInput)
+            connPur.commit()
+            curPur.close()
+            
+            clearEntryOrder()
+            OrderTreeView.delete(*OrderTreeView.get_children())
+            queryTreeOrder()
+            
         def genPurOrder():
             if AuthLevel(Login.AUTHLVL, 6) == False:
                 messagebox.showerror("Insufficient Clearance",
@@ -1652,7 +1671,6 @@ def openPurchase():
                         genPurOrderCom()
 
         def genPurOrderCom():
-            # try:
             curCom = connCom.cursor()
             curCom.execute("SELECT * FROM COMPANY_MWA")
             companyInfo = curCom.fetchall()
@@ -1773,23 +1791,8 @@ def openPurchase():
                     messagebox.showerror("Error",
                                          "Please Check Format",
                                          parent=RepWin)
-            
-            sqlUpdateStat = f"""UPDATE `PUR_ORDER_MASTER`.`PUR_ORDER_LIST` SET
-            IssueStat = %s,
-            OrderStat = %s
-
-            WHERE oid = %s
-            """
-
-            StatInput = (1, 3, loadOrderSelect)
-
-            curData.execute(sqlUpdateStat, StatInput)
-            connData.commit()
-            
-            OrderTreeView.delete(*OrderTreeView.get_children())
-            queryTreeOrder()
-            
             curData.close()
+            checkIssueStat()
 
             def totalCostCalc(Qty, OneCost):
                 QtyNum = float(Qty) if Qty else 0
@@ -1985,14 +1988,10 @@ def openPurchase():
             PurOrderGen.printNotes()
             
             PurOrderGen.output(f"{PurOrderNumRef}.pdf")
-            
+
             messagebox.showinfo("Create Successful", 
                                 f"You Have Generated PO {PurOrderNumRef}", parent=framePur) 
-            
-            # except:
-            #     messagebox.showerror("Error",
-            #                          "Please Check Format",
-            #                          parent=framePur)
+
         
 
         
