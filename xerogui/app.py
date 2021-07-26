@@ -104,7 +104,7 @@ def XeroFirstAuth():
         EnterEmailLabel = Label(LoginFrame, text = 'Xero Email :').grid(row = 0, column = 0,padx=5, pady=5,sticky = E)
         EnterEmailEntry = Entry(LoginFrame, width=24)
         EnterEmailEntry.grid(row=0, column=1, padx=5, pady=10,sticky = W)
-        EnterEmailEntry.insert(END, '' if XERO_EMAIL == 'None' else XERO_EMAIL)
+        EnterEmailEntry.insert(END, '' if XERO_EMAIL == 'None' or not XERO_EMAIL else XERO_EMAIL)
         
         EnterPWLabel = Label(LoginFrame, text = 'Xero Password :').grid(row = 1, column = 0,padx=5, pady=5,sticky = E)
         EnterPWEntry = Entry(LoginFrame, show="*", width = 24)
