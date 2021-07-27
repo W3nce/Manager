@@ -29,10 +29,10 @@ import os
 
 logininfo = (ConnConfig.host,ConnConfig.username,ConnConfig.password)
 
-if Login.AUTHLVL == 0:
-    pass
-else:
-    RetrieveToken()
+# if Login.AUTHLVL == 0:
+#     pass
+# else:
+#     RetrieveToken()
 
 def openPurchase():
     RepWin = Toplevel()
@@ -1744,8 +1744,8 @@ def openPurchase():
                                                 database= "STOCK_MASTER")
             
             connData = mysql.connector.connect(host = logininfo[0],
-                                               user = logininfo[1], 
-                                               password =logininfo[2])
+                                                user = logininfo[1], 
+                                                password =logininfo[2])
             curData = connData.cursor()
             for i in range(len(fullPartLst)):
                 curData.execute(f"SELECT * FROM `{ProLst[i]}`.`{MachAssemLst[i]}` WHERE PartNum = {PartLst[i]}")
@@ -1760,13 +1760,6 @@ def openPurchase():
                 PurchaseQty = int(QtyLst[i]) + BomPCH
                 BalanceQty = BomBAL - int(QtyLst[i])
                 OutstandingQty = PurchaseQty - BomRCV
-                
-                # print(f"BomPCH = {BomPCH}")
-                # print(f"BomBAL = {BomBAL}")
-                # print(f"BomRCV = {BomRCV}")
-                # print(f"PurchaseQty = {PurchaseQty}")
-                # print(f"BalanceQty = {BalanceQty}")
-                # print(f"OutstandingQty = {OutstandingQty}")
                 
                 if BalanceQty >= 0:
                     sqlUpdateBom = f"""UPDATE `{ProLst[i]}`.`{MachAssemLst[i]}` SET
@@ -1822,8 +1815,8 @@ def openPurchase():
 
                 else:
                     messagebox.showerror("Error",
-                                         "Please Check Format",
-                                         parent=RepWin)
+                                          "Please Check Format",
+                                          parent=RepWin)
             curData.close()
             checkIssueStat()
 
@@ -1987,16 +1980,25 @@ def openPurchase():
                     self.cell(w=0, h=5, txt="2. Purchase Order Number must indicate on all the delivery orders and invoices",
                               ln=True, align="L")
                     
-                    self.ln(30)
+                    self.ln(35)
                     
-                    self.cell(w=100, h=5, txt="________________________________________", align="L")
+                    signCoorVal = self.get_y()-25
+                    
+                    currentDate = datetime.today()
+                    currentDateFormat = currentDate.strftime("%d-%b-%Y")
+                    
+                    self.cell(w=150, h=5, txt="", align="L")
+                    self.cell(w=70, h=5, txt=currentDateFormat, ln=True, align="L")
+                    
+                    self.cell(w=120, h=5, txt="________________________________________", align="L")
                     self.cell(w=100, h=5, txt="______________________________", ln=True, align="L")
-                    self.cell(w=100, h=5, txt="SUPPLIER hereby confirm acceptance of this Order", 
+                    self.cell(w=120, h=5, txt="SUPPLIER hereby confirm acceptance of this Order", 
                               align="L")
                     self.cell(w=100, h=5, txt="MOTIONWELL Automation Pte. Ltd.",
                               ln=True, align="L")
                     
-                    self.cell(w=100, h=5, txt="Name, Designation, Signature and Date", 
+                    self.image("Sign.png", x=130, y=signCoorVal, h=40)
+                    self.cell(w=120, h=5, txt="Name, Designation, Signature and Date", 
                               align="L")
                     self.cell(w=100, h=5, txt="Authorized Signature and Date",
                               ln=True, align="L")
@@ -2015,7 +2017,7 @@ def openPurchase():
             PurOrderGen.printTotal(unitDataLst)
             PurOrderGen.ln(20)
             
-            if PurOrderGen.get_y() >= 218:
+            if PurOrderGen.get_y() >= 213:
                 PurOrderGen.add_page()
             
             PurOrderGen.printNotes()
@@ -2758,6 +2760,52 @@ def openPurchase():
     ApproveStatBox.bind("<<ComboboxSelected>>", ApproveStatSelect)
     ApproveStatBox.bind("<Button-1>", ApproveStatClick)
     IssueStatBox.bind("<<ComboboxSelected>>", IssueStatSelect)
+    
+    
+    
+    PurOrderNumBox.bind("<Return>", updateOrderReturn)
+    PurOrderNumBox.bind("<Delete>", deleteOrderDel) 
+    PurOrderNumBox.bind("<Escape>", exitOrderEsc)
+    
+    PaymentTermBox.bind("<Return>", updateOrderReturn)
+    PaymentTermBox.bind("<Delete>", deleteOrderDel) 
+    PaymentTermBox.bind("<Escape>", exitOrderEsc)
+    
+    OrderDateBox.bind("<Return>", updateOrderReturn)
+    OrderDateBox.bind("<Delete>", deleteOrderDel) 
+    OrderDateBox.bind("<Escape>", exitOrderEsc)
+    
+    VendorRemarkBox.bind("<Return>", updateOrderReturn)
+    VendorRemarkBox.bind("<Delete>", deleteOrderDel) 
+    VendorRemarkBox.bind("<Escape>", exitOrderEsc)
+    
+    TransCcyBox.bind("<Return>", updateOrderReturn)
+    TransCcyBox.bind("<Delete>", deleteOrderDel) 
+    TransCcyBox.bind("<Escape>", exitOrderEsc)
+    
+    TransExRateBox.bind("<Return>", updateOrderReturn)
+    TransExRateBox.bind("<Delete>", deleteOrderDel) 
+    TransExRateBox.bind("<Escape>", exitOrderEsc)
+    
+    ProgressStatBox.bind("<Return>", updateOrderReturn)
+    ProgressStatBox.bind("<Delete>", deleteOrderDel) 
+    ProgressStatBox.bind("<Escape>", exitOrderEsc)
+    
+    ApproveStatBox.bind("<Return>", updateOrderReturn)
+    ApproveStatBox.bind("<Delete>", deleteOrderDel) 
+    ApproveStatBox.bind("<Escape>", exitOrderEsc)
+    
+    IssueStatBox.bind("<Return>", updateOrderReturn)
+    IssueStatBox.bind("<Delete>", deleteOrderDel) 
+    IssueStatBox.bind("<Escape>", exitOrderEsc)
+    
+    OrderStatBox.bind("<Return>", updateOrderReturn)
+    OrderStatBox.bind("<Delete>", deleteOrderDel) 
+    OrderStatBox.bind("<Escape>", exitOrderEsc)
+    
+    TotalSGDBox.bind("<Return>", updateOrderReturn)
+    TotalSGDBox.bind("<Delete>", deleteOrderDel) 
+    TotalSGDBox.bind("<Escape>", exitOrderEsc)
 
     
 
