@@ -1159,7 +1159,7 @@ def reviewRFQ(tabNote):
                               FROM `rfq_master`.`rfq_list` `RFQ`
                               LEFT JOIN `index_emp_master`.`emp_data` `EM`
                               ON `EM`.`EMPLOYEE_ID` = `RFQ`.`PURCHASER`
-                              WHERE {SearchCrit} = '{Search}'
+                              WHERE INSTR(`{SearchCrit}`,'{Search}') > 0
                               ORDER BY `PROJECT_CLS_ID` ASC,`MACH_ID` ASC,`DATE_OF_ENTRY` ASC
                               """)
                               
@@ -1189,6 +1189,8 @@ def reviewRFQ(tabNote):
         curRFQ.close()
         
     def SearchCombCompList(e):
+        _SearchCombCompList()
+    def _SearchCombCompList():
         CritIndex = RFQTreeView["columns"].index(SearchCombo.get())
         CompList = []
         for iid in RFQTreeView.get_children():
@@ -1198,6 +1200,7 @@ def reviewRFQ(tabNote):
                 CompList+=[CritName]
             
         SearchEntry.set_completion_list(CompList)
+        SearchEntry.delete(0,END)
         
     def clearTreeUnit():
         
@@ -1254,6 +1257,8 @@ def reviewRFQ(tabNote):
     Frame1.columnconfigure(1, weight=1)
     Frame1.grid(row = 0, column = 0, ipadx = 10, ipady = 6,pady = (6,0), padx = 6,sticky =EW)
     
+    Label(Frame1, text = 'RFQ List', font="Arial 12 bold").pack(side = LEFT,padx = 6)
+    
     Frame2 = LabelFrame(ReviewRFQFrame,relief = 'ridge')
     Frame2.columnconfigure(1, weight=1)
     Frame2.grid(row = 1, column = 0, ipadx = 10, ipady = 6,pady = (6,0), padx = 6,sticky =EW)
@@ -1271,7 +1276,7 @@ def reviewRFQ(tabNote):
     RFQTreeScroll.pack(side=RIGHT, fill=Y)
     
     RFQTreeView = ttk.Treeview(Frame2, yscrollcommand=RFQTreeScroll.set, 
-                                selectmode="browse")
+                                selectmode="browse",height = 14)
     RFQTreeScroll.config(command=RFQTreeView.yview)
     
     RFQTreeView.pack(padx=2, pady=2,fill="x", expand=True)
@@ -1280,7 +1285,7 @@ def reviewRFQ(tabNote):
     
     RFQTreeView["columns"] = ("RFQ Number", "Project ID", "Machine",  
                                 "Mach QTY", "Parts Comp","Total Parts", "Vendor", "Status", 
-                                "Issue Date","Reply Date", "Entry Date", "Total Cost" , "Curr",
+                                "Issue Date","Reply Date", "Entry Date", "Total Cost" , "Currency",
                                 "Total SGD","Purchaser")
     
         
@@ -1297,7 +1302,7 @@ def reviewRFQ(tabNote):
     RFQTreeView.column("Reply Date", anchor=CENTER, width=80)
     RFQTreeView.column("Entry Date", anchor=CENTER, width=80)
     RFQTreeView.column("Total Cost", anchor=E, width=80)
-    RFQTreeView.column("Curr", anchor=CENTER, width=30)
+    RFQTreeView.column("Currency", anchor=CENTER, width=30)
     RFQTreeView.column("Total SGD", anchor=E, width=80)
     RFQTreeView.column("Purchaser", anchor=W, width=80)
     
@@ -1315,7 +1320,7 @@ def reviewRFQ(tabNote):
     RFQTreeView.heading("Reply Date", text="Reply Date", anchor=CENTER)
     RFQTreeView.heading("Entry Date", text="Entry Date", anchor=CENTER)
     RFQTreeView.heading("Total Cost", text="Total Cost", anchor=E)
-    RFQTreeView.heading("Curr", text="Curr", anchor=CENTER)
+    RFQTreeView.heading("Currency", text="Curr", anchor=CENTER)
     RFQTreeView.heading("Total SGD", text="Total SGD", anchor=E)
     RFQTreeView.heading("Purchaser", text="Purchaser", anchor=W)
     
@@ -1338,12 +1343,15 @@ def reviewRFQ(tabNote):
     SearchCombo = ttk.Combobox(Frame3, value = list(SearchDict) ,width = 16,state = 'readonly')
     SearchCombo.pack(side = LEFT,pady = 6)
     SearchCombo.bind("<<ComboboxSelected>>", SearchCombCompList)
-    
+    SearchCombo.current(0)
+
 
     SearchEntry = AutocompleteEntry(Frame3)
     SearchEntry.set_completion_list(['abc','cde'])
     SearchEntry.pack(side = LEFT,padx = 10,pady = 6)
     SearchEntry.bind("<Return>", SearchwCrit)
+        
+    _SearchCombCompList()
     
     SearchButton = Button(Frame3, text= 'Search', command = SearchwCrit,width = 14)
     SearchButton.pack(side = LEFT,padx = 10,pady = 6)
