@@ -279,7 +279,7 @@ def openRFQ(tabNote,RFQ = None):
         else:
             pass
     
-    def ShowPurchaserName():
+    def ShowPurchaserName(e):
         _ShowPurchaserName()
         
     def _ShowPurchaserName():
