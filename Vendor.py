@@ -563,10 +563,11 @@ def RunVEND():
                             if rawLst[0][j] == VendorClass.attribute_map[attr]:
                                 try: 
                                     SingleVendor[attr] = rawLst[i][j] if rawLst[i][j] else None
+                                    
                                 except AssertionError as e:
                                     print(e)
                                     messagebox.showerror("Vendor Import", 
-                                                        f"Incorrect Vendor Imput at \n{SingleVendor['_VENDOR_NAME']} : {VendorClass.attribute_map[attr]}", 
+                                                        f"Incorrect Vendor Imput at \n{SingleVendor['_VENDOR_NAME']} : {VendorClass.attribute_map[attr]}\n{rawLst[i][j]}", 
                                                         parent=root)
                                     return
                         
