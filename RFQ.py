@@ -493,7 +493,6 @@ def openRFQ(tabNote,RFQ = None):
                            SELECT * FROM `rfq_master`.`rfq_list` where `RFQ_REF_NO` = '{RFQNo}'
                            """)
         rfq_list = curRFQ.fetchall()
-        print('rfqlist',rfq_list)
         
         if rfq_list:
             CurrentRFQInfo = rfq_list[0] 
@@ -812,6 +811,22 @@ def openRFQ(tabNote,RFQ = None):
             
     def IssueRFQ():
         global CurrentRFQ
+        
+        def VerifyIssued():
+            curRFQ = connRFQ.cursor()
+            if UnitTreeView.RFQIssued:
+                curRFQ.execute("""UPDATE `rfq_master`.`rfq_list` SET
+                         `STATUS`= %s,
+                         `ISSUE_DATE`= %s
+                         WHERE `RFQ_REF_NO` = %s
+                            """, 
+                        (1, datetime.now().strftime('%Y-%m-%d'),CurrentRFQ))
+                connRFQ.commit()
+                
+                InsertReadonly(IssuedBox,datetime.now().strftime('%Y-%m-%d'))
+            else:
+                messagebox.showerror('Issue RFQ','RFQ not issued',parent = RFQFrame)
+            curRFQ = connRFQ.cursor()
             
         if CurrentRFQ:
             try:
@@ -822,38 +837,47 @@ def openRFQ(tabNote,RFQ = None):
                 return
             
             SaveCurrentRFQ()
+                
             curRFQ = connRFQ.cursor()
-            
-            if IssuedBox.get() and UnitTreeView.RFQIssued:
-                if messagebox.askyesno('Issue RFQ',f'This RFQ has been issued, Do you want to issue again?\n({CurrentRFQ})',parent = RFQFrame):
+            try:
+                if IssuedBox.get() and UnitTreeView.RFQIssued:
+                    if messagebox.askyesno('Issue RFQ',f'This RFQ has been issued, Do you want to issue again?\n({CurrentRFQ})',parent = RFQFrame):
+                        SaveRFQasPDF()
+                
+                        IssueEmail(CurrentRFQ = CurrentRFQ,
+                                      Purchaser = PurchaserNameBox.get(),
+                                      Vendor = VendorBox.get())
+                        curRFQ.execute("""UPDATE `rfq_master`.`rfq_list` SET
+                         `STATUS`= %s,
+                         `ISSUE_DATE`= %s
+                         WHERE `RFQ_REF_NO` = %s
+                            """, 
+                        (1, datetime.now().strftime('%Y-%m-%d'),CurrentRFQ))
+                        connRFQ.commit()
+                
+                        InsertReadonly(IssuedBox,datetime.now().strftime('%Y-%m-%d'))
+                else:
                     SaveRFQasPDF()
-            
-                    IssueEmail(CurrentRFQ = CurrentRFQ,Purchaser = PurchaserNameBox.get(),Vendor = VendorBox.get())
-                    InsertReadonly(IssuedBox,datetime.now().strftime('%Y-%m-%d'))
-                    
+                
+                    IssueEmail(CurrentRFQ = CurrentRFQ,
+                                  Purchaser = PurchaserNameBox.get(),
+                                  Vendor = VendorBox.get())
                     curRFQ.execute("""UPDATE `rfq_master`.`rfq_list` SET
-                             `STATUS`= %s,
-                             `ISSUE_DATE`= %s
-                             WHERE `RFQ_REF_NO` = %s
-                                """, 
-                            (1, datetime.now().strftime('%Y-%m-%d'),CurrentRFQ))
+                     `STATUS`= %s,
+                     `ISSUE_DATE`= %s
+                     WHERE `RFQ_REF_NO` = %s
+                        """, 
+                    (1, datetime.now().strftime('%Y-%m-%d'),CurrentRFQ))
                     connRFQ.commit()
-                    
-                    UnitTreeView.RFQIssued = 1
-            else:
-                SaveRFQasPDF()
             
-                IssueEmail(CurrentRFQ = CurrentRFQ,Purchaser = PurchaserNameBox.get(),Vendor = VendorBox.get())
-                InsertReadonly(IssuedBox,datetime.now().strftime('%Y-%m-%d'))
-                curRFQ.execute("""UPDATE `rfq_master`.`rfq_list` SET
-                             `STATUS`= %s,
-                             `ISSUE_DATE`= %s
-                             WHERE `RFQ_REF_NO` = %s
-                                """, 
-                            (1, datetime.now().strftime('%Y-%m-%d'),CurrentRFQ))
-                connRFQ.commit()
-                UnitTreeView.RFQIssued = 1
-            curRFQ.close()    
+                    InsertReadonly(IssuedBox,datetime.now().strftime('%Y-%m-%d'))
+                
+            except:
+                pass
+            curRFQ.close()
+
+            
+            
         else:
             messagebox.showerror('Issue RFQ','Please Create/Select RFQ to Issue',parent = RFQFrame)
         
