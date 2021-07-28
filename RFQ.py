@@ -169,7 +169,7 @@ def openRFQ(tabNote,RFQ = None):
         if ProjList:
             
             curRFQ.execute(f"""
-                           SELECT MACH_ID,MACH_NAME,ORDER_QTY FROM {ProjectCombo.get()}.mach_index
+                           SELECT `MACH_ID`,`MACH_NAME`,`ORDER_QTY` FROM `{ProjectCombo.get()}`.`mach_index`
                            """)
                            
             MachineDict = {Machid[0]:(Machid[1],Machid[2]) for Machid in curRFQ.fetchall()}
@@ -493,6 +493,7 @@ def openRFQ(tabNote,RFQ = None):
                            SELECT * FROM `rfq_master`.`rfq_list` where `RFQ_REF_NO` = '{RFQNo}'
                            """)
         rfq_list = curRFQ.fetchall()
+        print('rfqlist',rfq_list)
         
         if rfq_list:
             CurrentRFQInfo = rfq_list[0] 
@@ -504,22 +505,13 @@ def openRFQ(tabNote,RFQ = None):
                            
             AsmDict = {Asm[0]:Asm[1] for Asm in curRFQ.fetchall()}
             
-            
-
-            
-
-
-
-            #print(CurrentRFQ)
-            
             InsertReadonly(RFQRefBox,CurrentRFQInfo[1])
-            
             ProjectCombo.configure(state='active')
-            ProjectCombo.current(ProjList.index(CurrentRFQInfo[2]))
+            ProjectCombo.current(ProjectCombo._completion_list.index(CurrentRFQInfo[2]))
             ProjectCombo.configure(state='disabled') 
             _QueryMachNo()   
             MachineCombo.configure(state='active')
-            MachineCombo.current(MachineList.index(CurrentRFQInfo[3]))
+            MachineCombo.current(MachineCombo['values'].index(CurrentRFQInfo[3]))
             MachineCombo.configure(state='disabled')
             _QueryMaker()
             InsertReadonly(MacQtyBox,CurrentRFQInfo[4])
@@ -530,6 +522,7 @@ def openRFQ(tabNote,RFQ = None):
             InsertReadonly(DeliverBCalEnt,CurrentRFQInfo[11])
             CurrencyCombo.current(CountryRef.getCcyLst().index(CurrentRFQInfo[13]))
             PurchaserCombo.current(list(EmployeeDict).index(CurrentRFQInfo[14]))
+            _ShowPurchaserName()
             InsertReadonly(TotalSGDBox,CurrentRFQInfo[16])
             
             CompletedCheckbutton.configure(state=ACTIVE)
@@ -579,6 +572,7 @@ def openRFQ(tabNote,RFQ = None):
             #print(TreeViewParts)
             clearTreeUnit()
             for rec in TreeViewParts:
+                print(AsmDict)
                 UnitTreeView.insert(parent="", index=END, iid=rec[15], 
                                 values=(rec[15], rec[2], rec[3],
                                         rec[4], rec[5], rec[6], rec[7], rec[8],
@@ -808,11 +802,11 @@ def openRFQ(tabNote,RFQ = None):
             
             
         FileDir  = os.path.join(os.path.join(os.getcwd(),'temp'), CurrentRFQ +'.csv') 
+        os.makedirs(os.path.dirname(FileDir), exist_ok=True)
         with open(f"{FileDir}","w", newline="") as f:
             theWriter = csv.writer(f,lineterminator='\n')
             theWriter.writerow(['PartNum','Description','Maker','Maker Specification','Quatitiy'])
             for rec in PartsList:
-                print(rec)
                 theWriter.writerow(rec)
             f.close()
             
