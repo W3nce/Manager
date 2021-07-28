@@ -24,6 +24,8 @@ connRFQ = mysql.connector.connect(host = logininfo[0],
 Cross = os.path.join(os.path.join(os.getcwd(),'icons'), "cross.png") 
 
 
+
+
 class AttachmentFile(LabelFrame):
     def  __init__(self,master,filename = None, FileDict = None,PositionArry = None,Close = True,**kw):
         self.filename = filename
@@ -113,7 +115,7 @@ def EmailRFQWindow(CurrentRFQ = None,Purchaser = None,Vendor = None):
         PartType = PartTypeList[0]
         
         CCEntry.delete(0,END)
-        CCEntry.insert(END,'Jeff@motionwell.com.sg')
+        CCEntry.insert(END,'Jeff.zhao@motionwell.com.sg')
         
         SubjectEntry.delete(0,END)
         SubjectEntry.insert(END,f"""MOTIONWELL - RFQ : {_CurrentRFQ} - {PartType} """)
@@ -195,6 +197,7 @@ The contents of this e-mail message and any attachments are confidential and are
         print(AttachmentDict)
         _SendRFQEmail(AttachmentDict)
         
+        
     def _SendRFQEmail(AttachmentDict):
         AttachmentLst =list(AttachmentDict)
         AttachmentDict2 = {}
@@ -210,6 +213,7 @@ The contents of this e-mail message and any attachments are confidential and are
              Name = _Purchaser,
              Attachment = AttachmentDict2,
              Body = BodyText.get('0.0',END))
+        
         
         
     
@@ -363,7 +367,7 @@ The contents of this e-mail message and any attachments are confidential and are
             messagebox.showinfo('Issue RFQ',f'{_CurrentRFQ} has been issued')
         except AssertionError as e:
             messagebox.showerror('RFQ Email', 'Error : {e}')
-            
+        root.destroy()
 
 def CloseTab():
     root.destroy()
