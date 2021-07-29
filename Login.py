@@ -531,7 +531,7 @@ def Login():
                 
                 if LOCKEDUSER[1] == 'MWA2021':
                     ChangePW(LOCKEDUSER[0])
-                    
+                    LOCKEDUSER = None
                 else:
                     root.destroy()
             else:
