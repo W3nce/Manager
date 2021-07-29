@@ -134,7 +134,7 @@ def EmailRFQWindow(CurrentRFQ = None,Purchaser = None,Vendor = None):
         AttachmentDict[RFQCSVfileName][1].grid(row = 0, column = 0,padx = 6, pady = 4)
         
         BodyText.delete('1.0',END)
-        BodyText.insert(END, f"""Dear {_Vendor}
+        BodyText.insert(END, f"""Dear {_Vendor},
 
 Please help to quote with your best price for the item attached in the CSV File provided
 
@@ -212,6 +212,7 @@ The contents of this e-mail message and any attachments are confidential and are
              Vendor = _Vendor,
              Name = _Purchaser,
              Attachment = AttachmentDict2,
+             Subject = SubjectEntry.get(),
              Body = BodyText.get('0.0',END))
         
         
@@ -287,9 +288,7 @@ The contents of this e-mail message and any attachments are confidential and are
     BodyText = Text(BodyFrame)
     BodyText.grid(row = 0, column = 1, pady = 10, padx = 4, sticky = NSEW)
                  
-    ShowEmail()           
-
-    pass
+    ShowEmail()   
 
 
 def EmailRFQ(TO,
@@ -300,6 +299,7 @@ def EmailRFQ(TO,
              Name = None,
              CurrentRFQ = None,
              Attachment = None,
+             Subject = None,
              Body = None):
         
         Outlook = client.Dispatch('Outlook.Application')
@@ -329,11 +329,14 @@ def EmailRFQ(TO,
             
         PartTypeList = ['STANDARD PART', 'FABRICATION PART','GENERAL SUPPLY']
         PartType = PartTypeList[0]
-        NewRFQMail.Subject = f"""MOTIONWELL - RFQ : {_CurrentRFQ} - {PartType} """
+        if Subject:
+            NewRFQMail.Subject = Subject
+        else: 
+            NewRFQMail.Subject = f"""MOTIONWELL - RFQ : {_CurrentRFQ} - {PartType} """
         if Body:
             NewRFQMail.Body = Body
         else: NewRFQMail.Body = f"""
-Dear {_Vendor}
+Dear {_Vendor},
 
 Please help to quote with your best price for the item attached in the CSV File provided
 
@@ -366,7 +369,7 @@ The contents of this e-mail message and any attachments are confidential and are
             NewRFQMail.send
             messagebox.showinfo('Issue RFQ',f'{_CurrentRFQ} has been issued')
         except AssertionError as e:
-            messagebox.showerror('RFQ Email', 'Error : {e}')
+            messagebox.showerror('RFQ Email','Error : {e} \n{_AttachmentDict[Attachment]} does not exist')
         root.destroy()
 
 def CloseTab():
