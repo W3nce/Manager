@@ -115,7 +115,7 @@ def openRFQ(tabNote,RFQ = None):
                     
                     OpenCurrent(RFQNo)
                 else: 
-                    OpenCurrent(RFQNo)
+                    pass
             else:
                 OpenCurrent(RFQNo)
         else:
@@ -379,7 +379,7 @@ def openRFQ(tabNote,RFQ = None):
         InsertReadonly(TotalSGDBox,'')
         UnitTreeView.TreeViewSAVED = 0
         
-    def SaveCurrentParts():
+    def SaveCurrentParts(NewVendor = False):
         global CurrentRFQ
         if CurrentRFQ:
             curRFQAddParts = connRFQ.cursor()
@@ -396,7 +396,7 @@ def openRFQ(tabNote,RFQ = None):
                                     VALUES """
                 for iid in UnitTreeView.get_children():
                     FullPartNum = UnitTreeView.item(iid, 'values')[0]
-                    PO = 1 if 'checked' in UnitTreeView.item(iid, 'tags') else 0
+                    PO = 1 if 'checked' in UnitTreeView.item(iid, 'tags') and not NewVendor else 0
                     RFQUnitCost = 'NULL' if UnitTreeView.item(iid, 'values')[12] == 'None' else "{:.2f}".format(round(float(UnitTreeView.item(iid, 'values')[12]),2)) 
                     
                     PartInfo = FullPartNum.split('-',3)
@@ -432,18 +432,38 @@ def openRFQ(tabNote,RFQ = None):
                                 'No RFQ Created, Please Create a New RFQ Entry',
                                 parent = RFQFrame)
         
-    def SaveCurrentRFQ():
+    def SaveCurrentRFQ(NewVendor = False):
         global CurrentRFQ
         
         
         curRFQ = connRFQ.cursor()
         if CurrentRFQ:
-            SaveCurrentParts()
+            SaveCurrentParts(NewVendor)
             RFQ_REF_NO = CurrentRFQ
-            PARTS_COMP = 0
+            PARTS_COMP = len([1 if 'checked' in UnitTreeView.item(iid, 'tags') else 0 for iid in UnitTreeView.get_children()]) if CompletedCheck.get() else 0
             TOTAL_PARTS = len(UnitTreeView.get_children())
             VENDOR_NAME = VendorBox.get() if  VendorBox.get() else None
             STATUS = 0
+            for item in list(StatusDict.items()):
+                if item[1] == StatusBox.get():
+                    STATUS = item[0]
+            if CompletedCheck.get():
+                STATUS = 3
+                if messagebox.askyesno('Save Current Parts in RFQ',
+                                f'Marking {CurrentRFQ} as complete will prevent anymore edits to this RFQ\nContinue?',
+                                parent = RFQFrame):
+                    pass
+                    
+                else:
+                    messagebox.showinfo('Save Current Parts in RFQ',
+                                f'Failed to save RFQ\n({CurrentRFQ})',
+                                parent = RFQFrame)
+                    curRFQ.close()
+                    CompletedCheck.set(0)
+                    return
+                    
+            
+            
             ISSUE_DATE = IssuedBox.get() if IssuedBox.get() else None
             REPLY_DATE = ReplyDueCalEnt.get() if  ReplyDueCalEnt.get() else None
             DELIVER_DATE = DeliverBCalEnt.get() if  DeliverBCalEnt.get() else None
@@ -483,6 +503,7 @@ def openRFQ(tabNote,RFQ = None):
                                 parent = RFQFrame)
         connRFQ.commit()
         curRFQ.close()
+        Refresh()
         
         
     def OpenCurrent(RFQNo):
@@ -515,7 +536,21 @@ def openRFQ(tabNote,RFQ = None):
             _QueryMaker()
             InsertReadonly(MacQtyBox,CurrentRFQInfo[4])
             InsertReadonly(VendorBox,CurrentRFQInfo[7])
-            InsertReadonly(StatusBox,StatusDict[int(CurrentRFQInfo[8])])
+            QueryCurrentVend()
+            StatusNow = int(CurrentRFQInfo[8])
+            if int(CurrentRFQInfo[8]) == 0 or int(CurrentRFQInfo[8]) == 3:
+                pass
+            else:
+                
+                datestr = CurrentRFQInfo[10]
+                #Year,Month,Day = datestr.split('-',2)
+                if datetime.now().date()>= datestr:
+                    StatusNow = 2
+                else:
+                    StatusNow = 1
+                
+                
+            InsertReadonly(StatusBox,StatusDict[StatusNow])
             InsertReadonly(IssuedBox,CurrentRFQInfo[9])
             InsertReadonly(ReplyDueCalEnt,CurrentRFQInfo[10])
             InsertReadonly(DeliverBCalEnt,CurrentRFQInfo[11])
@@ -571,7 +606,6 @@ def openRFQ(tabNote,RFQ = None):
             #print(TreeViewParts)
             clearTreeUnit()
             for rec in TreeViewParts:
-                print(AsmDict)
                 UnitTreeView.insert(parent="", index=END, iid=rec[15], 
                                 values=(rec[15], rec[2], rec[3],
                                         rec[4], rec[5], rec[6], rec[7], rec[8],
@@ -582,13 +616,43 @@ def openRFQ(tabNote,RFQ = None):
                 if rec[18]:
                     UnitTreeView.tag_remove(rec[15], 'unchecked')
                     UnitTreeView.tag_add(rec[15], ('checked',))
-                
+                    
             UnitTreeView.TreeViewSAVED = 1
             UnitTreeView.RFQIssued = 1 if CurrentRFQInfo[9] else 0
             
             if UnitTreeView.get_children():
                 UnitTreeView.CalLineTotalPrice()
                 SumAllSGD()
+            if StatusNow >0:
+                SelectMakerPartsButton.configure(state = 'disabled')
+                SelectVendButton.configure(state = 'disabled')
+                PurchaserCombo.configure(state = 'disabled')
+                CurrencyCombo.configure(state = 'disabled')
+                ReplyDueCalButton.configure(state = 'disabled')
+                ClearPartsButton.configure(state = 'disabled')
+                IssueRFQButton.configure(state = 'disabled')
+            else:
+                SelectMakerPartsButton.configure(state = 'active')
+                SelectVendButton.configure(state = 'active')
+                PurchaserCombo.configure(state = 'active')
+                CurrencyCombo.configure(state = 'active')
+                ReplyDueCalButton.configure(state = 'active')
+                ClearPartsButton.configure(state = 'active')
+                IssueRFQButton.configure(state = 'active')
+            if StatusNow ==3:
+                SavePMButton.configure(state = 'disabled')
+                SaveRFQPartsButton.configure(state = 'disabled')
+                SavePMButton.configure(state = 'disabled')
+                SavePMButton.configure(state = 'disabled')
+                CompletedCheckbutton.configure(state = 'disabled')
+            else:
+                SavePMButton.configure(state = 'active')
+                SaveRFQPartsButton.configure(state = 'active')
+                SavePMButton.configure(state = 'active')
+                SavePMButton.configure(state = 'active')
+                CompletedCheckbutton.configure(state = 'active')
+                
+                
             
         else:
             if messagebox.askyesno('Load RFQ from Database',f'RFQ No. {RFQNo} do not exist in Database\nDo you wish to create a RFQ',parent = RFQFrame):
@@ -765,12 +829,12 @@ def openRFQ(tabNote,RFQ = None):
                 
         
         curRFQ.close()            
-        #OpenCurrent(CurrentRFQ)
+        Refresh()
         
     def SelectPuchaseAll():
         UnitTreeView.CheckUncheckAll()
         
-
+        
         
         
     def SumAllSGD():
@@ -809,6 +873,22 @@ def openRFQ(tabNote,RFQ = None):
                 theWriter.writerow(rec)
             f.close()
             
+    def QueryCurrentVend():
+        if VendorBox.get():
+            curRFQ = connRFQ.cursor()
+            curRFQ.execute(f"""SELECT * FROM index_vend_master.vendor_list WHERE `VENDOR_NAME` = '{VendorBox.get()}'
+                            """)
+            Vend = curRFQ.fetchall()[0]
+            curRFQ.close()
+            VendAddress = Vend[8]+','+Vend[9]+','+Vend[6]+','+Vend[5]+','+Vend[7]+','+Vend[4]
+            
+            InsertReadonly(VendorAddressBox,VendAddress)
+            
+            VendorNameLabel['text'] = Vend[3]
+                
+        else:
+            pass
+        
     def IssueRFQ():
         global CurrentRFQ
         
@@ -854,7 +934,7 @@ def openRFQ(tabNote,RFQ = None):
                             """, 
                         (1, datetime.now().strftime('%Y-%m-%d'),CurrentRFQ))
                         connRFQ.commit()
-                
+                        UnitTreeView.RFQIssued = 1
                         InsertReadonly(IssuedBox,datetime.now().strftime('%Y-%m-%d'))
                 else:
                     SaveRFQasPDF()
@@ -862,6 +942,7 @@ def openRFQ(tabNote,RFQ = None):
                     IssueEmail(CurrentRFQ = CurrentRFQ,
                                   Purchaser = PurchaserNameBox.get(),
                                   Vendor = VendorBox.get())
+                    
                     curRFQ.execute("""UPDATE `rfq_master`.`rfq_list` SET
                      `STATUS`= %s,
                      `ISSUE_DATE`= %s
@@ -869,7 +950,7 @@ def openRFQ(tabNote,RFQ = None):
                         """, 
                     (1, datetime.now().strftime('%Y-%m-%d'),CurrentRFQ))
                     connRFQ.commit()
-            
+                    UnitTreeView.RFQIssued = 1
                     InsertReadonly(IssuedBox,datetime.now().strftime('%Y-%m-%d'))
                 
             except:
@@ -880,6 +961,7 @@ def openRFQ(tabNote,RFQ = None):
             
         else:
             messagebox.showerror('Issue RFQ','Please Create/Select RFQ to Issue',parent = RFQFrame)
+        Refresh()
         
     def RFQNewVendor():
         if messagebox.askyesno('Create New RFQ','This RFQ has been issued, Do you want duplicate this RFQ for another Vendor?)',parent = RFQFrame):
@@ -1134,7 +1216,7 @@ def openRFQ(tabNote,RFQ = None):
     SaveRFQPartsButton = Button(Frame4,text = 'Save RFQ' ,width = 14, command = SaveCurrentRFQ)
     SaveRFQPartsButton.grid(row = 0, column = 4,padx = 8, pady = 6)
 
-    SavePMButton = Button(Frame4,text = 'Save to PM' ,width = 14, command = SaveVendorUnitCostToPM)
+    SavePMButton = Button(Frame4,text = 'Save to BOM' ,width = 14, command = SaveVendorUnitCostToPM)
     SavePMButton.grid(row = 0, column = 5,padx = 8, pady = 6)
         
     RefreshButton = Button(Frame4,text = 'Refresh' ,width = 14,command = Refresh)
@@ -1155,6 +1237,13 @@ def reviewRFQ(tabNote):
     tabNote.add(ReviewRFQFrame, text="Review All RFQ")
     ReviewRFQFrame.columnconfigure(0, weight=1)
     tabNote.select(ReviewRFQFrame)
+    
+    def RefreshTab(event):
+                        
+        tab_names = "Review All RFQ"
+        if tabNote.tab(tabNote.select(), "text") == tab_names:
+            RefreshTreeView()
+    tabNote.bind('<<NotebookTabChanged>>',RefreshTab)
    
     style = ttk.Style()
     style.theme_use("clam")
@@ -1199,7 +1288,7 @@ def reviewRFQ(tabNote):
         for rec in RFQList:
             RFQTreeView.insert(parent="", index=END, iid=rec[0], 
                             values=(rec[1], rec[2], rec[3],
-                                    rec[4], rec[5], rec[6], rec[7], rec[8],
+                                    rec[4], rec[5], rec[6], rec[7], StatusDict[int(rec[8])],
                                     rec[9], rec[10], rec[11], rec[12],rec[13],
                                     rec[14],rec[15]))
                 
