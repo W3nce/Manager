@@ -20,6 +20,7 @@ from xero_python.api_client.serializer import serialize
 from xero_python import models
 import time
 from AutoCombo import AutocompleteCombobox
+from POemail import EmailPOWindow as IssuePO
 
 import requests
 import CountryRef
@@ -28,7 +29,7 @@ import os
 # Login.AUTHLVL
 
 logininfo = (ConnConfig.host,ConnConfig.username,ConnConfig.password)
-
+LOCKEDUSER = Login.LOCKEDUSER
 if Login.AUTHLVL == 0:
     pass
 else:
@@ -674,7 +675,7 @@ def openPurchase():
         # 3 Issued
         # 4 Rejected
         
-        createComOrder = f"""INSERT INTO `PUR_ORDER_LIST` (
+        createComOrder = """INSERT INTO `PUR_ORDER_LIST` (
         PurOrderNum, PaymentTerm, OrderDate, VendorRemark, TransCcy, 
         TransExRate, ProgressStat, ApproveStat, IssueStat, OrderStat)
         
@@ -682,7 +683,7 @@ def openPurchase():
         
         def checkDateOrder(dateVar):
             if dateVar.get() == "":
-                return Noneu
+                return None
             else:
                 return dateVar.get()
         
@@ -2030,7 +2031,233 @@ def openPurchase():
         
 
         
+        def GeneratePDFOnly():
+            
+            curCom = connCom.cursor()
+            curCom.execute("SELECT * FROM COMPANY_MWA")
+            companyInfo = curCom.fetchall()
+            
+            curPur = connPur.cursor() 
+            curPur.execute(f"SELECT * FROM PUR_ORDER_LIST WHERE PurOrderNum = '{PurOrderNumRef}'")
+            purOrderInfo = curPur.fetchall()
+            
+            curPur.execute(f"SELECT * FROM `{PurOrderNumRef}`")
+            purOrderUnit = curPur.fetchall()
+            
+            curVend = connVend.cursor()
+            curVend.execute(f"SELECT * FROM VENDOR_LIST WHERE VENDOR_NAME = '{VendorRef}'")
+            vendorInfo = curVend.fetchall()
+            
+            curCom.close()
+            curPur.close()
+            curVend.close()
+            
+            def totalCostCalc(Qty, OneCost):
+                QtyNum = float(Qty) if Qty else 0
+                OneCostNum = float(OneCost) if OneCost else 0
+                total = QtyNum * OneCostNum
+                totalDigit = str("{:.2f}".format(total))
+                return totalDigit
+            
+            unitDataLst = [["", "Part No.", "Description", "Quantity", 
+                            "Tax", "Unit Cost", "Total Cost"]]
+            for i in range(0, len(purOrderUnit)):
+                unitDataLst.append([f"{str(i+1)}.", purOrderUnit[i][1], 
+                                    f"{purOrderUnit[i][2]}, {purOrderUnit[i][4]}", 
+                                    purOrderUnit[i][5], f"{purOrderUnit[i][6]}%", 
+                                    str("{:.2f}".format(float(purOrderUnit[i][11]) if purOrderUnit[i][11] else 0)) + " " + str(TransCcyUsed), 
+                                    str(totalCostCalc(purOrderUnit[i][5], purOrderUnit[i][11])) + " " + str(TransCcyUsed)])
+            
+            class PurOrder(FPDF):
+                def footer(self):
+                    self.set_y(-15) # 15 mm above from bottom
+                    self.set_font("Arial", "I", 10) # 10 Font Size
+                    self.cell(0, 10, f"Page {self.page_no()} / {{nb}}", align="C")
+                
+                def companyDetail(self):
+                    self.image("MWA.jpg", x=98, y=8, h=30)
+                    self.ln(35)
+                    
+                    self.set_font("Arial", "", 18)
+                    self.cell(w=90, h=9, txt = "PURCHASE ORDER", align="L")
+                    self.set_font("Arial", "B", 8)
+                    self.cell(w=50, h=3, txt = "Purchase Order Date", align="L")
+                    self.set_font("Arial", "", 8)
+                    self.cell(w=50, h=3, txt = f"{companyInfo[0][1]}", align="L", ln=True)
+                    
+                    self.cell(w=90, h=3, txt = "", align="L")
+                    self.cell(w=50, h=3, txt = f"{purOrderInfo[0][3]}", align="L")
+                    self.cell(w=50, h=3, txt = f"{companyInfo[0][2]}", align="L", ln=True)
+                    
+                    self.cell(w=90, h=3, txt = "", align="L")
+                    self.cell(w=50, h=3, txt = "", align="L")
+                    self.cell(w=50, h=3, txt = f"{companyInfo[0][3]}", align="L", ln=True)
+                    
+                    self.cell(w=90, h=3, txt = f"{vendorInfo[0][3]}", align="L")
+                    self.set_font("Arial", "B", 8)
+                    self.cell(w=50, h=3, txt = "Purchase Order Number", align="L")
+                    self.set_font("Arial", "", 8)
+                    self.cell(w=50, h=3, txt = f"{companyInfo[0][4]}", align="L", ln=True)
+                    
+                    self.cell(w=90, h=3, txt = f"{vendorInfo[0][8]}", align="L")
+                    self.cell(w=50, h=3, txt = f"{purOrderInfo[0][1]}", align="L")
+                    self.cell(w=50, h=3, txt = f"{companyInfo[0][5]}", align="L", ln=True)
+                    
+                    self.cell(w=90, h=3, txt = f"{vendorInfo[0][9]}", align="L")
+                    self.cell(w=50, h=3, txt = "", align="L")
+                    self.cell(w=50, h=3, txt = f"{companyInfo[0][6]}", align="L", ln=True)
+                    
+                    if vendorInfo[0][4] == "Singapore":
+                        self.cell(w=90, h=3, txt = f"Singapore {vendorInfo[0][7]}", align="L")
+                    else:
+                        self.cell(w=90, h=3, txt = f"{vendorInfo[0][7]} {vendorInfo[0][6]}, {vendorInfo[0][5]}, {vendorInfo[0][4]} ", align="L")
+                    self.set_font("Arial", "B", 8)
+                    self.cell(w=50, h=3, txt = "Payment Terms", align="L")
+                    self.set_font("Arial", "", 8)
+                    self.cell(w=50, h=3, txt = f"Co. Reg No.: {companyInfo[0][7]}", align="L", ln=True)
+                    
+                    if vendorInfo[0][14] == "":
+                        self.cell(w=90, h=3, txt = f"Attn: {vendorInfo[0][11]}", align="L")
+                    else:
+                        self.cell(w=90, h=3, txt = f"Attn: {vendorInfo[0][11]} / {vendorInfo[0][14]}", align="L")
+                    
+                    self.cell(w=50, h=3, txt = f"{purOrderInfo[0][2]}", align="L")
+                    self.cell(w=50, h=3, txt = f"Buyer: {companyInfo[0][8]}", align="L", ln=True)
+                    
+                    if vendorInfo[0][12] == "" and vendorInfo[0][15] == "":
+                        self.cell(w=90, h=3, txt = "", align="L")
+                    elif vendorInfo[0][12] != "" and vendorInfo[0][15] == "":
+                        self.cell(w=90, h=3, txt = f"Tel: {vendorInfo[0][12]}", align="L")
+                    else:
+                        self.cell(w=90, h=3, txt = f"Tel: {vendorInfo[0][12]} / {vendorInfo[0][15]}", align="L")
+                    self.cell(w=50, h=3, txt = "", align="L")
+                    self.cell(w=50, h=3, txt = f"Contact Number: {companyInfo[0][9]}", align="L", ln=True)
+                    
+                    if vendorInfo[0][13] == "" and vendorInfo[0][16] == "":
+                        self.cell(w=90, h=3, txt = "", align="L")
+                    elif vendorInfo[0][13] != "" and vendorInfo[0][16] == "":
+                        self.cell(w=90, h=3, txt = f"Email: {vendorInfo[0][13]}", align="L")
+                    else:
+                        self.cell(w=90, h=3, txt = f"Email: {vendorInfo[0][13]} / {vendorInfo[0][16]}", align="L")
+                    self.cell(w=50, h=3, txt = "", align="L")
+                    self.cell(w=50, h=3, txt = f"Email: {companyInfo[0][10]}", align="L", ln=True)
+                    
+                    self.ln(10)
+                
+                def columnWidth(self, lstRef): # Get the Maximum Width of Each Column  
+                    pageWidthMargin = self.w - 20
+                    fontSize = 10
+                    while True:
+                        self.set_font("Arial", "", fontSize)
+                        colLenLst = []
+                        for i in range(len(lstRef[0])): # Select Rows 1 2 3
+                            strLenLst = []
+                            for j in range(len(lstRef)): # Select Columns 1 2 3
+                                val = lstRef[j][i]
+                                strLen = self.get_string_width(val) + 5
+                                strLenLst.append(strLen)
+                            colLenLst.append(max(strLenLst))
+                        if sum(colLenLst) <= pageWidthMargin:
+                            break
+                        else:
+                            fontSize = fontSize - 0.5
+                    return colLenLst
+                
+                def printHeading(self, lst):
+                    self.set_fill_color(200, 220, 255)
+                    for i in range(len(lst[0])):
+                        strWidth = self.columnWidth(lst)[i]
+                        self.cell(strWidth, 5, lst[0][i], border=True, ln=False, fill=True, align="C")
+                
+                def printContent(self, lst):
+                    for i in range(1, len(lst)):
+                        self.ln()
+                        for j in range(len(lst[0])):
+                            strWidth = self.columnWidth(lst)[j]
+                            self.cell(strWidth, 5, lst[i][j], border=True)
+                    self.ln(10)
+                    
+                def printTotal(self, lst):
+                    costLst = []
+                    GSTLst = []
+                    for i in range(1, len(lst)):
+                        val = float(re.sub("[^0-9^.]", "", lst[i][6]))
+                        GSTVal = float(str(lst[i][4]).strip("%"))/100
+                        GSTCost = val * GSTVal
+                        
+                        costLst.append(val)
+                        GSTLst.append(GSTCost)
+                        
+                    subTotal = sum(costLst)
+                    GSTTotal = sum(GSTLst)
+                    totalSGD = subTotal + GSTTotal
+                    
+                    subTotalStr = str("{:.2f}".format(subTotal)) + " " + str(TransCcyUsed)
+                    GSTStr = str("{:.2f}".format(GSTTotal)) + " " + str(TransCcyUsed)
+                    totalStr = str("{:.2f}".format(totalSGD)) + " " + str(TransCcyUsed)
+                    
+                    self.set_font("Arial", "", 10)
+                    self.cell(w=155, h=5, txt="Subtotal", align="R")
+                    self.cell(w=30, h=5, txt=f"{subTotalStr}", align="R", ln=True)
+                    self.cell(w=155, h=5, txt="Tax", align="R")
+                    self.cell(w=30, h=5, txt=f"{GSTStr}", align="R", ln=True)
+                    self.cell(w=155, h=5, txt="Total", align="R")
+                    self.cell(w=30, h=5, txt=f"{totalStr}", align="R", ln=True)
+                    
+                def printNotes(self):
+                    self.set_font("Arial", "", 8)
+                    self.cell(w=0, h=5, txt="NOTES:", ln=True, align="L")
+                    self.cell(w=0, h=5, txt="1. Please acknowledge receipt & delivery date on our P.O. by chop & sign and email it back to us immediately.",
+                              ln=True, align="L")
+                    self.cell(w=0, h=5, txt="2. Purchase Order Number must indicate on all the delivery orders and invoices",
+                              ln=True, align="L")
+                    
+                    self.ln(35)
+                    
+                    signCoorVal = self.get_y()-25
+                    
+                    currentDate = datetime.today()
+                    currentDateFormat = currentDate.strftime("%d-%b-%Y")
+                    
+                    self.cell(w=150, h=5, txt="", align="L")
+                    self.cell(w=70, h=5, txt=currentDateFormat, ln=True, align="L")
+                    
+                    self.cell(w=120, h=5, txt="________________________________________", align="L")
+                    self.cell(w=100, h=5, txt="______________________________", ln=True, align="L")
+                    self.cell(w=120, h=5, txt="SUPPLIER hereby confirm acceptance of this Order", 
+                              align="L")
+                    self.cell(w=100, h=5, txt="MOTIONWELL Automation Pte. Ltd.",
+                              ln=True, align="L")
+                    
+                    self.image("Sign.png", x=130, y=signCoorVal, h=40)
+                    self.cell(w=120, h=5, txt="Name, Designation, Signature and Date", 
+                              align="L")
+                    self.cell(w=100, h=5, txt="Authorized Signature and Date",
+                              ln=True, align="L")
         
+            PurOrderGen = PurOrder("P", "mm", "A4")
+            PurOrderGen.set_auto_page_break(auto=True, margin=15)
+            PurOrderGen.add_page()
+            
+            PurOrderGen.companyDetail()
+            PurOrderGen.printHeading(unitDataLst)
+            PurOrderGen.printContent(unitDataLst)
+            
+            if PurOrderGen.get_y() >= 268:
+                PurOrderGen.add_page()
+            
+            PurOrderGen.printTotal(unitDataLst)
+            PurOrderGen.ln(20)
+            
+            if PurOrderGen.get_y() >= 213:
+                PurOrderGen.add_page()
+            
+            PurOrderGen.printNotes()
+            
+            PurOrderGen.output(f"{PurOrderNumRef}.pdf")
+
+            messagebox.showinfo("Create Successful", 
+                                f"You Have Generated PO {PurOrderNumRef}", parent=framePur) 
         
         
         
@@ -2360,7 +2587,24 @@ def openPurchase():
             Button(CommandFrame,text = 'Export',command = ExportData).grid(row = 0 ,column = 0, padx = 10, pady = 5)
             Button(CommandFrame,text = 'Clear Entry').grid(row = 0 ,column = 1, padx = 10, pady = 5)
         
-        
+        def IssuePOEmail():
+            global LOCKEDUSER
+            GeneratePDFOnly()
+                        
+            curVend = connVend.cursor()
+            curVend.execute(f"SELECT `VENDOR_NAME` FROM VENDOR_LIST WHERE VENDOR_NAME = '{VendorRef}'")
+            vendorInfo = curVend.fetchall()
+            curVend.close()
+            curPur = connPur.cursor()
+            curPur.execute(f"""SELECT `EMPLOYEE_NAME` FROM `index_emp_master`.`emp_data` WHERE `EMPLOYEE_ID` = '{LOCKEDUSER[0]}' """)
+            res = curPur.fetchall()[0]
+            Purchaser = None
+            if res:
+                
+                Purchaser = res[0]
+                IssuePO(PONumber = PurOrderNumRef,Purchaser = Purchaser,Vendor = vendorInfo[0][0])
+            else:
+                messagebox.showerror('ISSUE PO EMAIL','Error while finding user details',root =RepWin )
         
         
         
@@ -2387,12 +2631,15 @@ def openPurchase():
         
         buttonGenPur = Button(ButtonRepFrame, text="Generate Purchase Order", command=genPurOrder)
         buttonGenPur.grid(row=0, column=3, padx=10, pady=5, sticky=W)
+        
+        buttonGenPur = Button(ButtonRepFrame, text="Issue Purchase Order", command=IssuePOEmail)
+        buttonGenPur.grid(row=0, column=4, padx=10, pady=5, sticky=W)
     
         buttonExportXero = Button(ButtonRepFrame, text="Export to Xero", command=ExportToXero)
-        buttonExportXero.grid(row=0, column=4, padx=10, pady=5, sticky=W)
+        buttonExportXero.grid(row=0, column=5, padx=10, pady=5, sticky=W)
     
         buttonClosePur = Button(ButtonRepFrame, text="Close Tab", command=closeTabPur)
-        buttonClosePur.grid(row=0, column=5, padx=10, pady=5, sticky=W)
+        buttonClosePur.grid(row=0, column=6, padx=10, pady=5, sticky=W)
         
         
         ReqQtyLabel = Label(DataRepFrame, text="Req Qty.")
