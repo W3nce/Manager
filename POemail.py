@@ -290,6 +290,11 @@ The contents of this e-mail message and any attachments are confidential and are
     BodyText = Text(BodyFrame)
     BodyText.grid(row = 0, column = 1, pady = 10, padx = 4, sticky = NSEW)
                  
+        
+    BodyTextScroll = ttk.Scrollbar(BodyFrame,command=BodyText.yview)
+    BodyTextScroll.grid(row=0, column=1, pady = 10,padx = (1,4),sticky='nsew')
+    BodyText['yscrollcommand'] = BodyTextScroll.set
+    
     ShowEmail()   
 
 
