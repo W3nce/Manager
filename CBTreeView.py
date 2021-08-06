@@ -14,9 +14,106 @@ IM_CHECKED = os.path.join(os.path.join(os.getcwd(),'icons'), "checked.png")
 IM_UNCHECKED = os.path.join(os.path.join(os.getcwd(),'icons'), "unchecked.png") 
 
 
+class CbTreeviewParts(ttk.Treeview):
+    
+    def __init__(self, master=None, **kw):
+        
+        self.RFQIssued = 0
+        
+        self.root = master
+        kw.setdefault('style', 'cb.Treeview')
+        kw.setdefault('show', 'headings')  # hide column #0
+        ttk.Treeview.__init__(self, master, **kw)
+        # create checheckbox images
+        
+        self.im_checked = tk.PhotoImage('checked',
+                                          file = IM_CHECKED, master=self)
+        self.im_unchecked = tk.PhotoImage('unchecked',
+                                          file = IM_UNCHECKED, master=self)
+# =============================================================================
+#         self._im_checked = tk.PhotoImage('checked',
+#                                          data=b'GIF89a\x0e\x00\x0e\x00\xf0\x00\x00\x00\x00\x00\x00\x00\x00!\xf9\x04\x01\x00\x00\x00\x00,\x00\x00\x00\x00\x0e\x00\x0e\x00\x00\x02#\x04\x82\xa9v\xc8\xef\xdc\x83k\x9ap\xe5\xc4\x99S\x96l^\x83qZ\xd7\x8d$\xa8\xae\x99\x15Zl#\xd3\xa9"\x15\x00;',
+#                                          master=self)
+#         self._im_unchecked = tk.PhotoImage('unchecked',
+#                                            data=b'GIF89a\x0e\x00\x0e\x00\xf0\x00\x00\x00\x00\x00\x00\x00\x00!\xf9\x04\x01\x00\x00\x00\x00,\x00\x00\x00\x00\x0e\x00\x0e\x00\x00\x02\x1e\x04\x82\xa9v\xc1\xdf"|i\xc2j\x19\xce\x06q\xed|\xd2\xe7\x89%yZ^J\x85\x8d\xb2\x00\x05\x00;',
+#                                            master=self)
+#         
+# =============================================================================
+        
+        style = ttk.Style(self)
+        style.configure("cb.Treeview.Heading", font=(None, 9))
+        # put image on the right
+        style.layout('cb.Treeview.Row',
+                     [('Treeitem.row', {'sticky': 'nswe'}),
+                      ('Treeitem.image', {'side': 'right', 'sticky': 'e'})])
 
+        # use tags to set the checkbox state
+        self.tag_configure('checked', image='checked')
+        self.tag_configure('unchecked', image='unchecked')
 
-class CbTreeview(ttk.Treeview):
+    def tag_add(self, item, tags):
+        new_tags = tuple(self.item(item, 'tags')) + tuple(tags)
+        self.item(item, tags=new_tags)
+
+    def tag_remove(self, item, tag):
+        tags = list(self.item(item, 'tags'))
+        tags.remove(tag)
+        self.item(item, tags=tags)
+
+    def insert(self, parent, index, iid=None,checked = False, **kw):
+        item = ttk.Treeview.insert(self, parent, index, iid, **kw)
+        if checked:
+            self.tag_add(item, (item, 'checked'))
+        else:
+            self.tag_add(item, (item, 'unchecked'))
+        self.tag_bind(item, '<ButtonRelease-1>',
+                      lambda event: self._on_click(event, item))
+        
+        #self.tag_bind(item, '<Tab>', self.onTabKey)
+        self.TreeViewSAVED = 0
+        
+    def Tick(self, item):
+        if self.tag_has('checked', item):
+                self.tag_remove(item, 'checked')
+                self.tag_add(item, ('unchecked',))
+        else:
+            self.tag_remove(item, 'unchecked')
+            self.tag_add(item, ('checked',))
+        
+    def _on_click(self, event, item):
+            
+        """Handle click on items."""
+        if self.identify_row(event.y) == item:
+            if self.identify_column(event.x) == '#16': # click in 'Served' column
+                # toggle checkbox image
+                self.Tick(item)        
+        
+    
+            
+    def CheckUncheckAll(self):
+        
+        def CheckUncheck():
+            if all([self.tag_has('checked', line) for line in self.get_children()]):
+                for line in self.get_children():
+                    if self.tag_has('checked', line):
+                        self.tag_remove(line, 'checked')
+                        self.tag_add(line, ('unchecked',))
+            else:
+                for line in self.get_children():
+                    if self.tag_has('unchecked', line):
+                        self.tag_remove(line, 'unchecked')
+                        self.tag_add(line, ('checked',))
+                        
+        if self.get_children():
+            pass
+        else:
+            messagebox.showerror('Tick Parts' ,'No Parts in BOM List!',parent = self.root)  
+            return
+        
+        CheckUncheck()
+  
+
+class CbTreeviewRFQ(ttk.Treeview):
     
     def __init__(self, master=None,TotalSGDBox = None, **kw):
         self.TotalSGDBox = TotalSGDBox
