@@ -137,6 +137,27 @@ SetupCommand = ["""
                     COLLATE = utf8mb4_0900_ai_ci"""
                     ,
                     
+                    """CREATE SCHEMA IF NOT EXISTS `STOCK_MASTER` 
+                    DEFAULT CHARACTER SET utf8mb4 
+                    COLLATE utf8mb4_0900_ai_ci""",
+                    
+                    """
+                    CREATE TABLE IF NOT EXISTS `STOCK_MASTER`.`STOCK_LIST`
+                    (`oid` INT AUTO_INCREMENT PRIMARY KEY,
+                     `PartNum` VARCHAR(50),
+                     `DescStock` VARCHAR(200),
+                     `QtyStock` INT,
+                     `PurOrderNum` VARCHAR(50),
+                     `PurDate` DATE,
+                     `RcvDate` DATE,
+                     `Remark` VARCHAR(100))
+                    
+                    ENGINE = InnoDB
+                    DEFAULT CHARACTER SET = utf8mb4
+                    COLLATE = utf8mb4_0900_ai_ci"""
+                    
+                    ,
+                    
                     """CREATE SCHEMA IF NOT EXISTS `COMPANY_INFO` 
                     DEFAULT CHARACTER SET utf8mb4 
                     COLLATE utf8mb4_0900_ai_ci"""
@@ -208,6 +229,7 @@ SetupCommand = ["""
                     DEFAULT CHARACTER SET = utf8mb4
                     COLLATE = utf8mb4_0900_ai_ci"""
                     ,
+                    
                     """
                    CREATE TABLE IF NOT EXISTS `RFQ_MASTER`.`STATUS_MASTER` 
                    (`STATUS_ID` INT PRIMARY KEY,

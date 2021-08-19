@@ -251,6 +251,25 @@ def RunVEND():
                                         rec[17], statLst[rec[18]]))
         connVend.commit()
         curVend.close()
+        
+        iidLstVend = VendTreeView.get_children()
+        oidLstVend = list(iidLstVend)
+
+        indexLstVend = []
+        for rec in recLst:
+            if str(rec[0]) in iidLstVend:
+                indexLstVend.append(rec[1])
+        
+        numLstVend = list(range(len(indexLstVend)))
+        sortIndexVend = sorted(indexLstVend)
+        
+        dictIndexAndOidVend = dict(zip(indexLstVend, oidLstVend))
+        dictNumAndIndexVend = dict(zip(numLstVend, sortIndexVend))
+        
+        for i in numLstVend:
+            IndexVal = dictNumAndIndexVend.get(i)
+            oidVal = dictIndexAndOidVend.get(IndexVal)             
+            VendTreeView.move(oidVal, "", i)
     
     def fetchClass():
         curVend = connVend.cursor()

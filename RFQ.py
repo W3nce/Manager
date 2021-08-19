@@ -12,8 +12,7 @@ import csv
 import re 
 from fpdf import FPDF
 import ConnConfig,CountryRef
-from CBTreeView import CbTreeviewRFQ
-from CBTreeView import CbTreeviewParts
+from CBTreeView import CbTreeview
 from RFQemail import EmailRFQWindow as IssueEmail
 
 from AutoCombo import AutocompleteCombobox,AutocompleteEntry 
@@ -38,7 +37,6 @@ curRFQ.execute("""
 StatusDict = {Status[0]:Status[1] for Status in curRFQ.fetchall()}
 StatusList = list(StatusDict)
 
-curRFQ.close()
 
 def openRFQ(tabNote,RFQ = None):
     global ProjList,MachineList,MakerList,img,EmployeeDict,CurrentRFQ,StatusDict,photo
@@ -67,11 +65,11 @@ def openRFQ(tabNote,RFQ = None):
         pass
         
     CurrentRFQ = RFQ
-    CurrentMachNo = None
     
     #photo = Image.open('mag3.png')
     photo = PhotoImage(file = r"mag3.png")
     img = photo.subsample(4, 4)
+    
     curRFQ = connRFQ.cursor()
     curRFQ.execute("""
                    SELECT `PROJECT_CLS_ID`,`PROJECT_NAME` FROM `index_pro_master`.`project_info`
@@ -146,9 +144,8 @@ def openRFQ(tabNote,RFQ = None):
         _QueryMaker()
         
         ProjectCombo.configure(state='active')
-        MachineCombo.configure(state='readonly')
+        MachineCombo.configure(state='active')
         CompletedCheckbutton.configure(state='disabled')
-        IssueRFQButton.configure(state = 'disabled') 
 # =============================================================================
 #         
 #         if MakerList:
@@ -162,11 +159,9 @@ def openRFQ(tabNote,RFQ = None):
 # =============================================================================
             
         _ShowPurchaserName()
-        clearTreeParts()
-        clearTreeUnit()
     
     def _QueryMachNo():
-        global ProjList,MachineList,MachineDict,MakerList,CurrentMachNo
+        global ProjList,MachineList,MachineDict,MakerList
         MachineList = []
         MachineDict = {}
         
@@ -185,7 +180,6 @@ def openRFQ(tabNote,RFQ = None):
         
         if MachineList :
             MachineCombo.current(0)
-            CurrentMachNo = MachineCombo.get()
             
         else:
             MachineCombo.set('Please create a Machine')
@@ -197,12 +191,9 @@ def openRFQ(tabNote,RFQ = None):
 
     
     def _QueryMaker():
-        global MakerList,MachineDict,AsmDict,CurrentMachNo
-        CurrentMachNo = MachineCombo.get()
+        global MakerList,MachineDict,AsmDict
         AsmDict = {}
         curRFQ = connRFQ.cursor()
-        
-        
         if MachineDict: 
             
             curRFQ.execute(f"""
@@ -248,17 +239,17 @@ def openRFQ(tabNote,RFQ = None):
             
             SelectMakerPartsButton.configure(state = 'active')
             CreateRFQButton.configure(state = 'active')
+            IssueRFQButton.configure(state = 'active')
             
         else :
             MakerCombo.set('No parts in Unit Assembly')
             
             SelectMakerPartsButton.configure(state = 'disabled')
             CreateRFQButton.configure(state = 'disabled') 
+            IssueRFQButton.configure(state = 'disabled') 
             
         MacQtyBox.configure(state="readonly")
-        
-        
-        
+        clearTreeUnit()
         
 
         
@@ -267,23 +258,7 @@ def openRFQ(tabNote,RFQ = None):
         _QueryMaker()
 
     def QueryMaker(event):
-        global CurrentMachNo
-        if UnitTreeView.get_children() and MachineCombo.get() != CurrentMachNo:
-            if messagebox.askyesno('Change Machine',
-                                """Some Parts of the previous Machine have already been added to the RFQ List
-                                \nDo you want to Clear the Current RFQ List?""",parent = RFQFrame):
-                                    
-                
-                clearTreeUnit()
-                _QueryMaker()
-                clearTreeParts()
-            else:
-                MachineCombo.current(MachineCombo['values'].index(CurrentMachNo))
-            
-        else:
-            if MachineCombo.get() != CurrentMachNo:
-                clearTreeParts()
-            _QueryMaker()
+        _QueryMaker()
         
             
     def SelectVendor():
@@ -320,7 +295,7 @@ def openRFQ(tabNote,RFQ = None):
             PurchaserNameBox.configure(state="readonly")
         
         
-    def queryPartsUnit(Maker = None):
+    def queryTreeUnit(Maker = None):
         
         if Maker == "No Maker for Selected Parts":
             _Maker = ''
@@ -368,11 +343,8 @@ def openRFQ(tabNote,RFQ = None):
             PartsListRFQed = []
             for rec in PartsList:
                 FullPartNum = f'{ProjectCombo.get()}-{MachineCombo.get()}-{Asm}-' + rec[1] 
-                if FullPartNum in PartsTreeView.get_children():
-                    continue
-                
                 if not rec[15] or rec[15] == 'None':
-                    PartsTreeView.insert(parent="", index=END, iid=FullPartNum, 
+                    UnitTreeView.insert(parent="", index=END, iid=FullPartNum, 
                                     values=(FullPartNum, rec[2], rec[3],
                                             rec[4], rec[5], rec[6], rec[7], rec[8],
                                             rec[9], AsmDict[Asm] , rec[10], rec[11],
@@ -391,11 +363,14 @@ def openRFQ(tabNote,RFQ = None):
                                     'Some Parts have already been RFQed\nDo you still want to add to Current RFQ?',
                                     parent = RFQFrame):
                     for rec in PartsListRFQed:
-                        PartsTreeView.insert(parent="", index=END, iid=rec[0], 
+                        UnitTreeView.insert(parent="", index=END, iid=rec[0], 
                                         values=rec,checked = True)
                     
                     
             curRFQ.close()
+            UnitTreeView.CalLineTotalPrice()
+            UnitTreeView.TreeViewSAVED = 0
+            SumAllSGD()
             
     def clearTreeUnit():
         
@@ -403,40 +378,6 @@ def openRFQ(tabNote,RFQ = None):
         UnitTreeView.CalLineTotalPrice()
         InsertReadonly(TotalSGDBox,'')
         UnitTreeView.TreeViewSAVED = 0
-    
-    def clearTreeParts():
-        
-        PartsTreeView.delete(*PartsTreeView.get_children())
-        
-    def TickSelectedParts():
-        if PartsTreeView.selection():
-            if all(['checked' in PartsTreeView.item(iid, 'tags') for iid in PartsTreeView.selection()]):
-                for iid in PartsTreeView.selection():
-                    PartsTreeView.Tick(iid)
-            else:
-                for iid in PartsTreeView.selection():
-                    if 'checked' not in PartsTreeView.item(iid, 'tags'):
-                        PartsTreeView.Tick(iid)
-            
-        else:
-            messagebox.showerror('Tick Parts for RFQ List',
-                                         f'Failed to Select Ticked Part, No Parts Selected',
-                                         parent = RFQFrame)
-        
-        
-        
-        
-    def ConfirmParts():
-        if any(['checked' in PartsTreeView.item(iid, 'tags') for iid in PartsTreeView.get_children()]):
-            for iid in PartsTreeView.get_children():
-                if 'checked' in PartsTreeView.item(iid, 'tags') and iid not in UnitTreeView.get_children():
-                    UnitTreeView.insert(parent="", index=END, iid=iid, values=PartsTreeView.item(iid, 'values'))
-            
-               
-        else:
-            messagebox.showerror('Select Parts for RFQ List',
-                                         f'Failed to Select Part, No Parts Ticked',
-                                         parent = RFQFrame)
         
     def SaveCurrentParts(NewVendor = False):
         global CurrentRFQ
@@ -509,7 +450,7 @@ def openRFQ(tabNote,RFQ = None):
             if CompletedCheck.get():
                 STATUS = 3
                 if messagebox.askyesno('Save Current Parts in RFQ',
-                                f'Marking {CurrentRFQ} as complete will prevent anymore edits to this RFQ (Ensure PO parts are saved to BOM)\nContinue?',
+                                f'Marking {CurrentRFQ} as complete will prevent anymore edits to this RFQ\nContinue?',
                                 parent = RFQFrame):
                     pass
                     
@@ -589,7 +530,7 @@ def openRFQ(tabNote,RFQ = None):
             ProjectCombo.current(ProjectCombo._completion_list.index(CurrentRFQInfo[2]))
             ProjectCombo.configure(state='disabled') 
             _QueryMachNo()   
-            MachineCombo.configure(state='readonly')
+            MachineCombo.configure(state='active')
             MachineCombo.current(MachineCombo['values'].index(CurrentRFQInfo[3]))
             MachineCombo.configure(state='disabled')
             _QueryMaker()
@@ -686,6 +627,7 @@ def openRFQ(tabNote,RFQ = None):
                 SelectMakerPartsButton.configure(state = 'disabled')
                 SelectVendButton.configure(state = 'disabled')
                 PurchaserCombo.configure(state = 'disabled')
+                CurrencyCombo.configure(state = 'disabled')
                 ReplyDueCalButton.configure(state = 'disabled')
                 ClearPartsButton.configure(state = 'disabled')
                 IssueRFQButton.configure(state = 'disabled')
@@ -693,6 +635,7 @@ def openRFQ(tabNote,RFQ = None):
                 SelectMakerPartsButton.configure(state = 'active')
                 SelectVendButton.configure(state = 'active')
                 PurchaserCombo.configure(state = 'active')
+                CurrencyCombo.configure(state = 'active')
                 ReplyDueCalButton.configure(state = 'active')
                 ClearPartsButton.configure(state = 'active')
                 IssueRFQButton.configure(state = 'active')
@@ -851,6 +794,9 @@ def openRFQ(tabNote,RFQ = None):
                             Vendor = 'NULL'
                             KeyPartInfo = FullPartNum.split('-',3)
                             ProjID = KeyPartInfo[0]
+                            MachID = KeyPartInfo[1]
+                            AsmID = KeyPartInfo[2]
+                            PartNo = KeyPartInfo[3]
                             Assem_Full = KeyPartInfo[1]+'_'+KeyPartInfo[2]
                             if 'checked' in UnitTreeView.item(iid, 'tags'):
                                 Vendor = f"'{VendorBox.get()}'" if  VendorBox.get() else 'NULL'
@@ -874,7 +820,7 @@ def openRFQ(tabNote,RFQ = None):
                 except Error as e:
                     print(e)
                     
-                except AssertionError:
+                except AssertionError as e:
                     messagebox.showerror('Save Current Parts and Export to Project Manager','Please ensure RFQ is Issued and Parts are selected',parent = RFQFrame)
                  
                 
@@ -885,11 +831,8 @@ def openRFQ(tabNote,RFQ = None):
         curRFQ.close()            
         Refresh()
         
-    def SelectPurchaseAll():
+    def SelectPuchaseAll():
         UnitTreeView.CheckUncheckAll()
-    
-    def SelectPartsAll():
-        PartsTreeView.CheckUncheckAll()
         
         
         
@@ -938,6 +881,7 @@ def openRFQ(tabNote,RFQ = None):
             Vend = curRFQ.fetchall()[0]
             curRFQ.close()
             VendAddress = Vend[8]+','+Vend[9]+','+Vend[6]+','+Vend[5]+','+Vend[7]+','+Vend[4]
+            
             InsertReadonly(VendorAddressBox,VendAddress)
             
             VendorNameLabel['text'] = Vend[3]
@@ -1020,7 +964,7 @@ def openRFQ(tabNote,RFQ = None):
         Refresh()
         
     def RFQNewVendor():
-        if messagebox.askyesno('Create New RFQ','This RFQ has been issued, Do you want duplicate this RFQ for another Vendor?',parent = RFQFrame):
+        if messagebox.askyesno('Create New RFQ','This RFQ has been issued, Do you want duplicate this RFQ for another Vendor?)',parent = RFQFrame):
                     
             CreateRFQEntry(NewVendor=True)
         else:
@@ -1073,7 +1017,7 @@ def openRFQ(tabNote,RFQ = None):
     MakerCombo = ttk.Combobox(SelectMakerPartsFrame, width=30, height = 6,value = MakerList, state="readonly")      
     MakerCombo.grid(row = 0, column = 0)
     
-    SelectMakerPartsButton = Button (SelectMakerPartsFrame, width=14, text = 'Select Parts', command = lambda : queryPartsUnit(MakerCombo.get()))  
+    SelectMakerPartsButton = Button (SelectMakerPartsFrame, width=14, text = 'Select Parts', command = lambda : queryTreeUnit(MakerCombo.get()))  
     SelectMakerPartsButton.grid(row = 0, column = 1,padx = 9)
     
     VendorLabel = Label(Frame1, text = 'Vendor')
@@ -1156,6 +1100,14 @@ def openRFQ(tabNote,RFQ = None):
     Frame22 = Frame(Frame2)
     Frame22.grid(row = 0, column = 1,sticky = E)
 
+    CurrencyLabel = Label(Frame22,text = 'Currency')
+    CurrencyLabel.grid(row = 0, column = 0,padx = (10,4),pady =4,sticky = W)
+    
+    CurrencyCombo = ttk.Combobox(Frame22,width=6, value=CountryRef.getCcyLst(), state="readonly")
+    CurrencyCombo.grid(row = 0, column = 1,padx = 4,pady =4,sticky = W)
+    CurrencyCombo.bind("<<ComboboxSelected>>", ChangeCurrency)
+    CurrencyCombo.current(0) if CurrencyCombo['value'] else None
+
     PurchaserLabel = Label(Frame22,text = 'Purchaser')
     PurchaserLabel.grid(row = 0, column = 2,padx = (10,4),pady =4,sticky = W)
 
@@ -1171,94 +1123,11 @@ def openRFQ(tabNote,RFQ = None):
     Frame3.columnconfigure(1, weight=1)
     Frame3.grid(row = 2, column = 0, ipadx = 10, ipady = 6,pady = (6,0), padx = 6,sticky =EW)
     
-    TopPartsFrame = Frame(Frame3)
-    TopPartsFrame.pack(side = TOP, fill=BOTH,expand = True)
-    TopPartsFrame.columnconfigure(0, weight=1)
-
-    BottomPartsFrame = Frame(Frame3)
-    BottomPartsFrame.pack(side= BOTTOM, fill=BOTH,expand = True)
-    BottomPartsFrame.columnconfigure(0, weight=1)
-    
-    Label(TopPartsFrame,text = 'BOM List for All Assemblies',font = ('Arial 12 bold')).pack(side = LEFT,padx = (8,4) ,pady =4)
-    Button(TopPartsFrame,text = 'Tick All',command = SelectPartsAll).pack(side = RIGHT,padx = (4,8) ,pady =4)
-    
-    PartsTreeScroll = Scrollbar(Frame3)
-    PartsTreeScroll.pack(side=RIGHT, fill=Y)
-    
-    PartsTreeView = CbTreeviewParts(Frame3, yscrollcommand=PartsTreeScroll.set, 
-                                selectmode="extended")
-    PartsTreeScroll.config(command=PartsTreeView.yview)
-    
-    PartsTreeView.pack(padx=2, pady=2,fill="x", expand=True)
-    
-    
-    
-    
-    PartsTreeView["columns"] = ("Part No", "Description", "CLS",  
-                                "Maker", "Spec","V", "DES", "SPA", 
-                                "OH","UA", "REQ", "PCH", 
-                                "UnitCost", "Curr","Total","RFQ")
-    
-    PartsTreeView.column("#0", width=0, stretch=NO)
-    PartsTreeView.column("Part No", anchor=W, width=80)
-    PartsTreeView.column("Description", anchor=W, width=140)
-    PartsTreeView.column("CLS", anchor=CENTER, width=50)
-    PartsTreeView.column("Maker", anchor=W, width=90)
-    PartsTreeView.column("Spec", anchor=W, width=200)
-    PartsTreeView.column("V", anchor=W, width=30)
-    PartsTreeView.column("DES", anchor=E, width=35)
-    PartsTreeView.column("SPA", anchor=E, width=35)
-    PartsTreeView.column("OH", anchor=E, width=35)
-    PartsTreeView.column("UA", anchor=E, width=35)
-    PartsTreeView.column("REQ", anchor=E, width=35)
-    PartsTreeView.column("PCH", anchor=E, width=35)
-    PartsTreeView.column("UnitCost", anchor=E, width=80)
-    PartsTreeView.column("Curr", anchor=W, width=45)
-    PartsTreeView.column("Total", anchor=E, width=80)
-    PartsTreeView.column("RFQ", anchor=CENTER, width=35,stretch=NO)
-    
-    
-    PartsTreeView.heading("#0", text="Index", anchor=W)
-    PartsTreeView.heading("Part No", text="Part", anchor=W)
-    PartsTreeView.heading("Description", text="Description", anchor=W)
-    PartsTreeView.heading("CLS", text="CLS", anchor=CENTER)
-    PartsTreeView.heading("Maker", text="Maker", anchor=W)
-    PartsTreeView.heading("Spec", text="Maker Spec", anchor=W) 
-    PartsTreeView.heading("V", text="Ver", anchor=W)
-    PartsTreeView.heading("DES", text="DES", anchor=E)
-    PartsTreeView.heading("SPA", text="SPA", anchor=E)
-    PartsTreeView.heading("OH", text="OH", anchor=E)
-    PartsTreeView.heading("UA", text="UA", anchor=E)
-    PartsTreeView.heading("REQ", text="REQ", anchor=E)
-    PartsTreeView.heading("PCH", text="PCH", anchor=E)
-    PartsTreeView.heading("UnitCost", text="Unit Cost", anchor=E)
-    PartsTreeView.heading("Curr", text="Curr", anchor=W)
-    PartsTreeView.heading("Total", text="Total Cost", anchor=E)
-    PartsTreeView.heading("RFQ", text="RFQ", anchor=CENTER)
-    
-
-    BlankPartsBox = Entry(BottomPartsFrame,state = "readonly" )
-    BlankPartsBox.grid(row = 0, column = 0,pady =4,padx = (4,8),sticky = EW)
-    
-    ConfirmPartsButton = Button(BottomPartsFrame,text = 'Confirm Ticked Parts', width=16,command = ConfirmParts)
-    ConfirmPartsButton.grid(row = 0, column = 1, padx = (4,8) ,pady =4,sticky = W)
-    
-    SelectPartsButton = Button(BottomPartsFrame,text = 'Tick Selected Parts', width=14,command = TickSelectedParts)
-    SelectPartsButton.grid(row = 0, column = 2, padx = (8,8) ,pady =4,sticky = W)
-    
-    ClearPartsButton = Button(BottomPartsFrame,text = 'Clear Parts', width=14,command = clearTreeParts)
-    ClearPartsButton.grid(row = 0, column = 3, padx = (4,8) ,pady =4,sticky = W) 
-    
-    
-    Frame4 = LabelFrame(RFQFrame)
-    Frame4.columnconfigure(1, weight=1)
-    Frame4.grid(row = 3, column = 0, ipadx = 10, ipady = 6,pady = (6,0), padx = 6,sticky =EW)
-    
-    TopFrame = Frame(Frame4)
+    TopFrame = Frame(Frame3)
     TopFrame.pack(side = TOP, fill=BOTH,expand = True)
     TopFrame.columnconfigure(0, weight=1)
 
-    BottomTreeFrame = Frame(Frame4)
+    BottomTreeFrame = Frame(Frame3)
     BottomTreeFrame.pack(side= BOTTOM, fill=BOTH,expand = True)
     BottomTreeFrame.columnconfigure(0, weight=1)
     
@@ -1268,23 +1137,12 @@ def openRFQ(tabNote,RFQ = None):
     TotalSGDBox = Entry(BottomTreeFrame,width=24,state = "readonly",font = ('Arial 10 bold'),justify=RIGHT)
     TotalSGDBox.grid(row = 0, column = 2, padx = 4,pady =4,sticky = W) 
     
-    Label(TopFrame,text = 'RFQ List',font = ('Arial 12 bold')).pack(side = LEFT,padx = (8,4) ,pady =4)
+    Button(TopFrame,text = 'Select All',command = SelectPuchaseAll).pack(side = RIGHT,padx = (4,8) ,pady =4)
     
-    Button(TopFrame,text = 'Tick All',command = SelectPurchaseAll).pack(side = RIGHT,padx = (4,8) ,pady =4)
-        
-    CurrencyCombo = ttk.Combobox(TopFrame,width=6, value=CountryRef.getCcyLst(), state="readonly")
-    CurrencyCombo.pack(side = RIGHT,padx = 8 ,pady =4)
-    CurrencyCombo.bind("<<ComboboxSelected>>", ChangeCurrency)
-    CurrencyCombo.current(0) if CurrencyCombo['value'] else None
-        
-    CurrencyLabel = Label(TopFrame,text = 'Currency',font ='Arial 10 bold')
-    CurrencyLabel.pack(side = RIGHT,padx = 4 ,pady =4)
-    
-    
-    UnitTreeScroll = Scrollbar(Frame4)
+    UnitTreeScroll = Scrollbar(Frame3)
     UnitTreeScroll.pack(side=RIGHT, fill=Y)
     
-    UnitTreeView = CbTreeviewRFQ(Frame4, yscrollcommand=UnitTreeScroll.set, 
+    UnitTreeView = CbTreeview(Frame3, yscrollcommand=UnitTreeScroll.set, 
                                 selectmode="browse", TotalSGDBox = TotalSGDBox)
     UnitTreeScroll.config(command=UnitTreeView.yview)
     
@@ -1337,34 +1195,34 @@ def openRFQ(tabNote,RFQ = None):
     
 
     BlankBox = Entry(BottomTreeFrame,state = "readonly" )
-    BlankBox.grid(row = 0, column = 0,pady =4,padx = 4,sticky = EW)
+    BlankBox.grid(row = 0, column = 0,pady =4,sticky = EW)
     
     ClearPartsButton = Button(BottomTreeFrame,text = 'Clear Parts', width=14,command = clearTreeUnit)
     ClearPartsButton.grid(row = 0, column = 3, padx = (4,8) ,pady =4,sticky = W) 
     
-    Frame5 = Frame(RFQFrame)
-    Frame5.columnconfigure(3, weight=1)
-    Frame5.grid(row = 4, column = 0, ipadx = 10, ipady = 6,pady = (6,0), padx = 6,sticky =EW)
+    Frame4 = Frame(RFQFrame)
+    Frame4.columnconfigure(3, weight=1)
+    Frame4.grid(row = 3, column = 0, ipadx = 10, ipady = 6,pady = (6,0), padx = 6,sticky =EW)
     
-    CreateRFQButton = Button(Frame5,text = 'Create RFQ',width = 14,command = ConfirmCreateRFQ)
+    CreateRFQButton = Button(Frame4,text = 'Create RFQ',width = 14,command = ConfirmCreateRFQ)
     CreateRFQButton.grid(row = 0, column = 0)
     
-    IssueRFQButton = Button(Frame5,text = 'Issue RFQ' ,width = 14,command = IssueRFQ)
+    IssueRFQButton = Button(Frame4,text = 'Issue RFQ' ,width = 14,command = IssueRFQ)
     IssueRFQButton.grid(row = 0, column = 1,padx = 8, pady = 6)
     
-    DuplicateRFQButton = Button(Frame5,text = 'Duplicate RFQ' ,width = 14,command = RFQNewVendor)
+    DuplicateRFQButton = Button(Frame4,text = 'Duplicate RFQ' ,width = 14,command = RFQNewVendor)
     DuplicateRFQButton.grid(row = 0, column = 2,padx = 8, pady = 6)
 
-    SaveRFQPartsButton = Button(Frame5,text = 'Save RFQ List' ,width = 14, command = SaveCurrentRFQ)
+    SaveRFQPartsButton = Button(Frame4,text = 'Save RFQ' ,width = 14, command = SaveCurrentRFQ)
     SaveRFQPartsButton.grid(row = 0, column = 4,padx = 8, pady = 6)
 
-    SavePMButton = Button(Frame5,text = 'Save to BOM' ,width = 14, command = SaveVendorUnitCostToPM)
+    SavePMButton = Button(Frame4,text = 'Save to BOM' ,width = 14, command = SaveVendorUnitCostToPM)
     SavePMButton.grid(row = 0, column = 5,padx = 8, pady = 6)
         
-    RefreshButton = Button(Frame5,text = 'Refresh' ,width = 14,command = Refresh)
+    RefreshButton = Button(Frame4,text = 'Refresh' ,width = 14,command = Refresh)
     RefreshButton.grid(row = 0, column = 6,padx = (8,0), pady = 6)
 
-    CloseButton = Button(Frame5,text = 'Close Tab' ,width = 14,command = CloseTab)
+    CloseButton = Button(Frame4,text = 'Close Tab' ,width = 14,command = CloseTab)
     CloseButton.grid(row = 0, column = 7,padx = (8,0), pady = 6)
     
     if CurrentRFQ:

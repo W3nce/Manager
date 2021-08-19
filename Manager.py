@@ -1122,6 +1122,25 @@ if Login.AUTH:
                                             showDelOnHoldMach(rec[13]),
                                             rec[14], estMachCost))
 
+            iidLstMach = MachTreeView.get_children()
+            oidLstMach = list(iidLstMach)
+
+            indexLstMach = []
+            for rec in recLst:
+                if str(rec[0]) in iidLstMach:
+                    indexLstMach.append(rec[1])
+            
+            numLstMach = list(range(len(indexLstMach)))
+            sortIndexMach = sorted(indexLstMach)
+            
+            dictIndexAndOidMach = dict(zip(indexLstMach, oidLstMach))
+            dictNumAndIndexMach = dict(zip(numLstMach, sortIndexMach))
+            
+            for i in numLstMach:
+                IndexVal = dictNumAndIndexMach.get(i)
+                oidVal = dictIndexAndOidMach.get(IndexVal)             
+                MachTreeView.move(oidVal, "", i)
+        
         def checkProTotal():
             curLoad = connLoad.cursor()
             curLoad.execute(f"SELECT * FROM `MACH_INDEX`")
@@ -1502,8 +1521,23 @@ if Login.AUTH:
             messagebox.showinfo("Create Successful", 
                                 f"You Have Created Machine {machID}", parent=frameMach)
         
+        def checkMachID():
+            curLoad = connLoad.cursor()
+            curLoad.execute("SELECT * FROM MACH_INDEX")
+            recLst = curLoad.fetchall()  
+            connLoad.commit()
+            curLoad.close()
+            
+            MachIDLst = []
+            for ele in recLst:
+                MachIDLst.append(ele[1])
+            return MachIDLst
+        
         def createMach():
-            if MachIDBox.get() == "":
+            if MachIDBox.get() in checkMachID():
+                messagebox.showerror("Create Error", 
+                                     f"You Cannot Have Duplicate Machine No. {MachIDBox.get()}", parent=frameMach) 
+            elif MachIDBox.get() == "":
                 messagebox.showerror("Create Error", 
                                      "Invalid Machine Number", parent=frameMach) 
             else:
@@ -1921,6 +1955,25 @@ if Login.AUTH:
                                                   showDelOnHold(rec[21]), showDelOnHold(rec[22]),
                                                   f"{OrderQtyMach} × {rec[23]}", 
                                                   rec[24], estCost))
+            
+                iidLstAssem = AssemTreeView.get_children()
+                oidLstAssem = list(iidLstAssem)
+    
+                indexLstAssem = []
+                for rec in recLst:
+                    if str(rec[0]) in iidLstAssem:
+                        indexLstAssem.append(rec[3])
+                
+                numLstAssem = list(range(len(indexLstAssem)))
+                sortIndexAssem = sorted(indexLstAssem)
+                
+                dictIndexAndOidAssem = dict(zip(indexLstAssem, oidLstAssem))
+                dictNumAndIndexAssem = dict(zip(numLstAssem, sortIndexAssem))
+                
+                for i in numLstAssem:
+                    IndexVal = dictNumAndIndexAssem.get(i)
+                    oidVal = dictIndexAndOidAssem.get(IndexVal)             
+                    AssemTreeView.move(oidVal, "", i)
             
             def checkMachTotal():
                 machRef = machName
@@ -2465,9 +2518,28 @@ if Login.AUTH:
                 messagebox.showinfo("Create Successful",
                                     f"You Have Created Assem {assemFullName}",
                                     parent=frameAssem)
+    
+            def checkAssemID():
+                curLoad = connLoad.cursor()
+                curLoad.execute(f"SELECT * FROM `{machName}`")
+                recLst = curLoad.fetchall()  
+                connLoad.commit()
+                curLoad.close()
+                
+                AssemIDLst = []
+                for ele in recLst:
+                    AssemIDLst.append(ele[3])
+                return AssemIDLst
             
             def createAssem():
-                if NumBox.get() == "":
+                TypeLst = ["M", "E", "P"]
+                assemFullName = f"{TypeLst[TypeBox.current()]}{NumBox.get()}"
+                
+                if assemFullName in checkAssemID():
+                    messagebox.showerror("Create Error", 
+                                         f"You Cannot Have Duplicate Assembly No. {assemFullName}", parent=frameAssem) 
+
+                elif NumBox.get() == "":
                     messagebox.showerror("Create Error", 
                                          "Invalid Assembly Number", parent=frameAssem) 
                 else:
@@ -3088,6 +3160,25 @@ if Login.AUTH:
                                                     checkCurrencyNone(rec[18], rec[20]), 
                                                     f"{rec[19]} {rec[20]}"))
         
+                    iidLstUnit = UnitTreeView.get_children()
+                    oidLstUnit = list(iidLstUnit)
+
+                    indexLstUnit = []
+                    for rec in recLst:
+                        if str(rec[0]) in iidLstUnit:
+                            indexLstUnit.append(rec[1])
+                    
+                    numLstUnit = list(range(len(indexLstUnit)))
+                    sortIndexUnit = sorted(indexLstUnit)
+                    
+                    dictIndexAndOidUnit = dict(zip(indexLstUnit, oidLstUnit))
+                    dictNumAndIndexUnit = dict(zip(numLstUnit, sortIndexUnit))
+                    
+                    for i in numLstUnit:
+                        IndexVal = dictNumAndIndexUnit.get(i)
+                        oidVal = dictIndexAndOidUnit.get(IndexVal)             
+                        UnitTreeView.move(oidVal, "", i)
+
                 def fetchUnitClass():
                     connVend = mysql.connector.connect(host = logininfo[0],
                                                        user = logininfo[1], 
@@ -4088,10 +4179,12 @@ if Login.AUTH:
                                              checkCurrencyNone(result[i][22], "SGD")]
                                 fullLst.append(singleLst)
                             
+                            sortLst = sorted(fullLst)
+                            
                             with open(f"{unitFull}.csv", "w", newline="") as f:
                                 theWriter = csv.writer(f)
                                 theWriter.writerow(headingLst)
-                                for rec in fullLst:
+                                for rec in sortLst:
                                     theWriter.writerow(rec)
     
                             messagebox.showinfo("Export Successful", 

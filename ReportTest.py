@@ -1116,7 +1116,8 @@ def openPurchase():
                 proIndexLst = []
                 for item in proIndex:
                     proIndexLst.append(item[1])    
-                return proIndexLst
+                sortProIndexLst = sorted(proIndexLst)
+                return sortProIndexLst
         
         def ProSelect(e):
             proName = selectProBox.get()
@@ -1144,7 +1145,8 @@ def openPurchase():
                     machIndexLst = []
                     for item in machIndex:
                         machIndexLst.append(item[1])
-                    selectMachBox.config(value=machIndexLst)
+                    sortMachIndexLst = sorted(machIndexLst)
+                    selectMachBox.config(value=sortMachIndexLst)
                 selectMachBox.current(0)
                 selectAssemBox.current(0)
     
@@ -1171,7 +1173,8 @@ def openPurchase():
                     assemIndexLst = []
                     for item in assemIndex:
                         assemIndexLst.append(f"{item[1]}{item[2]}")
-                    selectAssemBox.config(value=assemIndexLst)
+                    sortAssemIndexLst = sorted(assemIndexLst)
+                    selectAssemBox.config(value=sortAssemIndexLst)
                 selectAssemBox.current(0)
                 
         def AssemSelect(e):
@@ -1201,7 +1204,27 @@ def openPurchase():
                                         values=(rec[1], rec[2], rec[3], rec[4], rec[5], rec[6], rec[7], 
                                                 rec[8], rec[9], rec[10], rec[11], rec[12], rec[13], 
                                                 rec[14], rec[15], rec[17], rec[18], rec[20]))
-                    
+                
+                iidLstVal = ValTreeView.get_children()
+                oidLstVal = list(iidLstVal)
+    
+                indexLstVal = []
+                for rec in unitIndex:
+                    if str(rec[0]) in iidLstVal:
+                        indexLstVal.append(rec[1])
+                
+                numLstVal = list(range(len(indexLstVal)))
+                sortIndexVal = sorted(indexLstVal)
+                
+                dictIndexAndOidVal = dict(zip(indexLstVal, oidLstVal))
+                dictNumAndIndexVal = dict(zip(numLstVal, sortIndexVal))
+                
+                for i in numLstVal:
+                    IndexVal = dictNumAndIndexVal.get(i)
+                    oidVal = dictIndexAndOidVal.get(IndexVal)             
+                    ValTreeView.move(oidVal, "", i)
+                
+                
         framePMA = Frame(framePur)
         framePMA.grid(row=0, column=0, columnspan=2, padx=10, pady=0, ipadx=10, ipady=0 , sticky=W+E)
         

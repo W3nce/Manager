@@ -155,6 +155,8 @@ Tel: 65502218
 Woodlands Industrial Estate
 Singapore 738733
 
+Website: www.motionwell.com.sg| HP: +65 87684297
+
 The contents of this e-mail message and any attachments are confidential and are intended solely for addressee. The information may also be legally privileged. This transmission is sent in trust, for the sole purpose of delivery to the intended recipient. If you have received this transmission in error, any use, reproduction or dissemination of this transmission is strictly prohibited. If you are not the intended recipient, please immediately notify the sender by reply e-mail or phone and delete this message and its attachments, if any.""")
  
 
@@ -281,14 +283,10 @@ The contents of this e-mail message and any attachments are confidential and are
     
     BodyFrame = Frame(root)
     BodyFrame.grid(ipadx = 10, padx = 6,sticky = EW)
-    BodyFrame.columnconfigure(0, weight=1)
+    BodyFrame.columnconfigure(1, weight=1)
     
     BodyText = Text(BodyFrame)
-    BodyText.grid(row = 0, column = 0, pady = 10, padx = (4,0), sticky = NSEW)
-    
-    BodyTextScroll = ttk.Scrollbar(BodyFrame,command=BodyText.yview)
-    BodyTextScroll.grid(row=0, column=1, pady = 10,padx = (1,4),sticky='nsew')
-    BodyText['yscrollcommand'] = BodyTextScroll.set
+    BodyText.grid(row = 0, column = 1, pady = 10, padx = 4, sticky = NSEW)
                  
     ShowEmail()   
 
@@ -358,6 +356,8 @@ Tel: 65502218
 #07-26(Manufacturing Shop)
 Woodlands Industrial Estate
 Singapore 738733
+
+Website: www.motionwell.com.sg| HP: +65 87684297
 
 The contents of this e-mail message and any attachments are confidential and are intended solely for addressee. The information may also be legally privileged. This transmission is sent in trust, for the sole purpose of delivery to the intended recipient. If you have received this transmission in error, any use, reproduction or dissemination of this transmission is strictly prohibited. If you are not the intended recipient, please immediately notify the sender by reply e-mail or phone and delete this message and its attachments, if any."""
         try:
