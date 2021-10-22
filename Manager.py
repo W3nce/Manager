@@ -1122,6 +1122,25 @@ if Login.AUTH:
                                             showDelOnHoldMach(rec[13]),
                                             rec[14], estMachCost))
 
+            iidLstMach = MachTreeView.get_children()
+            oidLstMach = list(iidLstMach)
+
+            indexLstMach = []
+            for rec in recLst:
+                if str(rec[0]) in iidLstMach:
+                    indexLstMach.append(rec[1])
+
+            numLstMach = list(range(len(indexLstMach)))
+            sortIndexMach = sorted(indexLstMach)
+
+            dictIndexAndOidMach = dict(zip(indexLstMach, oidLstMach))
+            dictNumAndIndexMach = dict(zip(numLstMach, sortIndexMach))
+
+            for i in numLstMach:
+                IndexVal = dictNumAndIndexMach.get(i)
+                oidVal = dictIndexAndOidMach.get(IndexVal)             
+                MachTreeView.move(oidVal, "", i)
+
         def checkProTotal():
             curLoad = connLoad.cursor()
             curLoad.execute(f"SELECT * FROM `MACH_INDEX`")
@@ -1502,8 +1521,23 @@ if Login.AUTH:
             messagebox.showinfo("Create Successful", 
                                 f"You Have Created Machine {machID}", parent=frameMach)
         
+        def checkMachID():
+            curLoad = connLoad.cursor()
+            curLoad.execute("SELECT * FROM MACH_INDEX")
+            recLst = curLoad.fetchall()  
+            connLoad.commit()
+            curLoad.close()
+            
+            MachIDLst = []
+            for ele in recLst:
+                MachIDLst.append(ele[1])
+            return MachIDLst
+        
         def createMach():
-            if MachIDBox.get() == "":
+            if MachIDBox.get() in checkMachID():
+                messagebox.showerror("Create Error", 
+                                     f"You Cannot Have Duplicate Machine No. {MachIDBox.get()}", parent=frameMach) 
+            elif MachIDBox.get() == "":
                 messagebox.showerror("Create Error", 
                                      "Invalid Machine Number", parent=frameMach) 
             else:
@@ -1921,6 +1955,25 @@ if Login.AUTH:
                                                   showDelOnHold(rec[21]), showDelOnHold(rec[22]),
                                                   f"{OrderQtyMach} × {rec[23]}", 
                                                   rec[24], estCost))
+                
+                iidLstAssem = AssemTreeView.get_children()
+                oidLstAssem = list(iidLstAssem)
+    
+                indexLstAssem = []
+                for rec in recLst:
+                    if str(rec[0]) in iidLstAssem:
+                        indexLstAssem.append(rec[3])
+                
+                numLstAssem = list(range(len(indexLstAssem)))
+                sortIndexAssem = sorted(indexLstAssem)
+                
+                dictIndexAndOidAssem = dict(zip(indexLstAssem, oidLstAssem))
+                dictNumAndIndexAssem = dict(zip(numLstAssem, sortIndexAssem))
+                
+                for i in numLstAssem:
+                    IndexVal = dictNumAndIndexAssem.get(i)
+                    oidVal = dictIndexAndOidAssem.get(IndexVal)             
+                    AssemTreeView.move(oidVal, "", i)
             
             def checkMachTotal():
                 machRef = machName
@@ -2466,8 +2519,27 @@ if Login.AUTH:
                                     f"You Have Created Assem {assemFullName}",
                                     parent=frameAssem)
             
+            def checkAssemID():
+                curLoad = connLoad.cursor()
+                curLoad.execute(f"SELECT * FROM `{machName}`")
+                recLst = curLoad.fetchall()  
+                connLoad.commit()
+                curLoad.close()
+                
+                AssemIDLst = []
+                for ele in recLst:
+                    AssemIDLst.append(ele[3])
+                return AssemIDLst
+            
             def createAssem():
-                if NumBox.get() == "":
+                TypeLst = ["M", "E", "P"]
+                assemFullName = f"{TypeLst[TypeBox.current()]}{NumBox.get()}"
+                
+                if assemFullName in checkAssemID():
+                    messagebox.showerror("Create Error", 
+                                         f"You Cannot Have Duplicate Assembly No. {assemFullName}", parent=frameAssem) 
+
+                elif NumBox.get() == "":
                     messagebox.showerror("Create Error", 
                                          "Invalid Assembly Number", parent=frameAssem) 
                 else:
@@ -3087,7 +3159,26 @@ if Login.AUTH:
                                                     rec[14], rec[15], rec[16], rec[17], 
                                                     checkCurrencyNone(rec[18], rec[20]), 
                                                     f"{rec[19]} {rec[20]}"))
-        
+                    
+                    iidLstUnit = UnitTreeView.get_children()
+                    oidLstUnit = list(iidLstUnit)
+
+                    indexLstUnit = []
+                    for rec in recLst:
+                        if str(rec[0]) in iidLstUnit:
+                            indexLstUnit.append(rec[1])
+                    
+                    numLstUnit = list(range(len(indexLstUnit)))
+                    sortIndexUnit = sorted(indexLstUnit)
+                    
+                    dictIndexAndOidUnit = dict(zip(indexLstUnit, oidLstUnit))
+                    dictNumAndIndexUnit = dict(zip(numLstUnit, sortIndexUnit))
+                    
+                    for i in numLstUnit:
+                        IndexVal = dictNumAndIndexUnit.get(i)
+                        oidVal = dictIndexAndOidUnit.get(IndexVal)             
+                        UnitTreeView.move(oidVal, "", i)
+                    
                 def fetchUnitClass():
                     connVend = mysql.connector.connect(host = logininfo[0],
                                                        user = logininfo[1], 
@@ -3871,20 +3962,20 @@ if Login.AUTH:
                                         singleLst[13] = rawLst[i][j]
                                     elif rawLst[0][j] == "OS. QTY":
                                         singleLst[14] = rawLst[i][j]
-                                    elif rawLst[0][j] == "REMARK":
+                                    elif rawLst[0][j] == "REMARK" or rawLst[0][j] == "Remark":
                                         singleLst[15] = rawLst[i][j]
-                                    elif rawLst[0][j] == "VENDOR":
+                                    elif rawLst[0][j] == "VENDOR" or rawLst[0][j] == "Vendor":
                                         singleLst[16] = rawLst[i][j]
-                                    elif rawLst[0][j] == "UNIT COST":
+                                    elif rawLst[0][j] == "UNIT COST" or rawLst[0][j] == "Unit Cost":
                                         singleLst[17] = rawLst[i][j]
     
-                                    elif rawLst[0][j] == "TOTAL COST":
+                                    elif rawLst[0][j] == "TOTAL COST" or rawLst[0][j] == "Total Cost":
                                         singleLst[18] = rawLst[i][j]
                                     elif rawLst[0][j] == "CURRENCY":
                                         singleLst[19] = rawLst[i][j]
                                     elif rawLst[0][j] == "EXCHANGE RATE":
                                         singleLst[20] = rawLst[i][j]
-                                    elif rawLst[0][j] == "TOTAL SGD":
+                                    elif rawLst[0][j] == "TOTAL SGD" or rawLst[0][j] == "Total in SGD":
                                         singleLst[21] = rawLst[i][j]
                                         
                                 if singleLst != ["", "", "", "", "", "", 
@@ -3899,6 +3990,10 @@ if Login.AUTH:
                         
                         def removeSymbol(cost):
                             val = re.sub("[^0-9\.]", "", str(cost))
+                            return val
+                        
+                        def removeNumber(cost):
+                            val = re.sub("[0-9\.\ ]", "", str(cost))
                             return val
                         
                         def sumTotalCost(unitCst, num):
@@ -3974,15 +4069,30 @@ if Login.AUTH:
                             if fullLst[i][17] == "":
                                 UnitCost = None
                             else:
-                                UnitCost = float(removeSymbol(fullLst[i][17]))
+                                UnitCostTest = removeSymbol(fullLst[i][17])
+                                if UnitCostTest == "":
+                                    UnitCost = None
+                                else:
+                                    UnitCost = float(UnitCostTest)
                             
                             if fullLst[i][18] == "":
                                 TotalUnitCost = sumTotalCost(UnitCost, REQ)
                             else:
-                                TotalUnitCost = float(fullLst[i][18])
+                                TotalUnitCostTest = removeSymbol(fullLst[i][18])
+                                if TotalUnitCostTest == "":
+                                    TotalUnitCost = 0.0
+                                else:
+                                    TotalUnitCost = float(TotalUnitCostTest)
                                 
                             if fullLst[i][19] == "":
-                                Currency = "SGD"
+                                if UnitCost == None:
+                                    Currency = "SGD"
+                                else:
+                                    CurrencyTest = str(removeNumber(fullLst[i][17]))
+                                    if CurrencyTest == "":
+                                        Currency = "Not Spec."
+                                    else:
+                                        Currency = CurrencyTest
                             else:
                                 Currency = fullLst[i][19]
                                 
@@ -3999,7 +4109,11 @@ if Login.AUTH:
                             if fullLst[i][21] == "":
                                 TotalSGD = totalSGDConvert(TotalUnitCost, ExRate)
                             else:
-                                TotalSGD = fullLst[i][21]
+                                TotalSGDTest = removeSymbol(fullLst[i][21])
+                                if TotalSGDTest == "":
+                                    TotalSGD = 0.0
+                                else:
+                                    TotalSGD = float(TotalSGDTest)
                             
                             tup = (PartNum, PartDesc, D, CLS, V, Maker, MakerSpec,
                                     DES, SPA, OH, REQ, PCH, BAL, RCV, OS, Remark, Vendor,
@@ -4024,6 +4138,7 @@ if Login.AUTH:
                             connLoad.commit()
     
                         curLoad.close()
+                        
                         clearEntryUnit()
                         UnitTreeView.delete(*UnitTreeView.get_children())
                         queryTreeUnit()
@@ -4077,21 +4192,24 @@ if Login.AUTH:
                             fullLst = []
                             for i in range(len(result)):
                                 singleLst = [f"{unitFull}-{threeDigitConverter(result[i][1])}", 
-                                             result[i][2], result[i][3], result[i][4],
-                                             result[i][5], result[i][6], result[i][7],
+                                             result[i][2].strip(), result[i][3].strip(), 
+                                             result[i][4].strip(), result[i][5], 
+                                             result[i][6].strip(), result[i][7].strip(),
                                              result[i][8], result[i][9], result[i][10],
                                              result[i][11], result[i][12], result[i][13],
-                                             result[i][14], result[i][15], result[i][16],
-                                             result[i][17], 
+                                             result[i][14], result[i][15], 
+                                             result[i][16].strip(), result[i][17].strip(), 
                                              checkCurrencyNone(result[i][18], result[i][20]),
                                              checkCurrencyNone(result[i][19], result[i][20]),
                                              checkCurrencyNone(result[i][22], "SGD")]
                                 fullLst.append(singleLst)
                             
+                            sortLst = sorted(fullLst)
+                            
                             with open(f"{unitFull}.csv", "w", newline="") as f:
                                 theWriter = csv.writer(f)
                                 theWriter.writerow(headingLst)
-                                for rec in fullLst:
+                                for rec in sortLst:
                                     theWriter.writerow(rec)
     
                             messagebox.showinfo("Export Successful", 
