@@ -20,6 +20,7 @@ from selenium.common.exceptions import TimeoutException
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.chrome.options import Options
+from win32com.client import Dispatch
 
 import os
 
@@ -143,8 +144,20 @@ def XeroFirstAuth():
 #     chrome_options.binary_location = CHROME_LOCATION
 # 
 # =============================================================================
+    def get_version_via_com(filename):
+        parser = Dispatch("Scripting.FileSystemObject")
+        try:
+            version = parser.GetFileVersion(filename)
+        except Exception:
+            return None
+        return version  
+    paths = [r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+             r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"]
+    version = list(filter(None, [get_version_via_com(p) for p in paths]))[0]
+    print(version)
 
     driver = webdriver.Chrome(CHROME_DRIVER_LOCATION, options = chrome_options)
+    print(driver)
 
     driver.get(auth_url)
     def TryLogin(Error = None):
